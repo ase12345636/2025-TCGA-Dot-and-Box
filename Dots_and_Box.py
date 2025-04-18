@@ -105,7 +105,10 @@ class DotsAndBox():
 
                 # 進行落子並檢查換手
                 self.state.current_player,score = make_move(self.state.board, row, col, self.state.current_player)
-                self.state.p1_p2_scores[self.state.current_player] += score
+                if self.state.current_player == -1:
+                    self.state.p1_p2_scores[0] += score
+                elif self.state.current_player == 1:
+                    self.state.p1_p2_scores[1] += score
                 if verbose:
                     self.print_board()
         winner = GetWinner(self.state.board, self.state.p1_p2_scores)
