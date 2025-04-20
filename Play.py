@@ -2,35 +2,35 @@ from Human import Human
 from RandomBot import Random_Bot,Greedy_Bot
 from Dots_and_Box import DotsAndBox
 from DeepLearning import *
-from Alpha.MCTS import MCTSPlayer
 from Alpha.AlphaBeta import AlphaBetaPlayer
+from Alpha.C_AB import C_AB_player
+from Alpha.MCTS import MCTSPlayer
+from AlphaZero.AlphaZeroMCTS import AlphaZeroMCTSPlayer
 from arg import *
 import os
+
+size_m = m
+size_n = n
 
 game_state = STATE(
     p1_p2_scores=[0, 0],
     board=[[]],
-    m=4,
-    n=4,
+    m=size_m,
+    n=size_n,
     current_player=-1
 )
-
-size_m = m
-size_n = n
 
 game = DotsAndBox(game_state)
 p1 = [Human(m,n), 'Human']
 p2 = [Random_Bot(m,n), 'random']
 p3 = [Greedy_Bot(m,n), 'greedy']
-# p4 = [MCTSPlayer(num_simulations=100, exploration_weight=1.5, max_depth=5,selfFirst=True), 'MCTS']
-# p4[0].game_state = game
 
 def self_play(player1, player2):
     """
     讓兩個玩家對戰，回傳比賽結果
     """
     game.NewGame()
-    return game.play(player1, player2)
+    return game.play(player1, player2, verbose=False)
 
 def record_result(file, game_num, bot1_name, bot2_name, bot1_win, bot2_win):
     """
@@ -127,7 +127,7 @@ def dualAB(n_game, bot1, bot1_name,depth=3):
     with open(file_path, "a") as f:
         f.write(f"{bot1_name} VS AlphaBeta".center(76) + "\n")
 
-        bot2 = AlphaBetaPlayer(1,game,depth)
+        bot2 = C_AB_player(1,game.state,depth)
         for i in range(1, n_game + 1):
             print(f"Game {i}")
 
@@ -151,7 +151,7 @@ def dualAB(n_game, bot1, bot1_name,depth=3):
         
         second_bot1_win = 0
         second_bot2_win = 0
-        bot2 = AlphaBetaPlayer(-1, game, depth)
+        bot2 = C_AB_player(-1, game.state, depth)
         # 先後手交換
         for i in range(1, n_game + 1):
             print(f"Game {i}")
@@ -195,25 +195,41 @@ def main():
     # args_Res['load_model_name'] = f'Resnet_model_4x4_31.h5'
     # p5 = [ResnetBOT(input_size_m=size_m,input_size_n=size_n,game=game,args=args_Res), 'resnet']
     # game.play(p2[0], p5[0])
-    # for ver in range(5,6):
+    MCTS_1 = MCTSPlayer(30000,game_state, -1, 1.5, 2)
+    MCTS_2 = MCTSPlayer(30000,game_state, 1, 1.5, 2)
+    cab_1 = C_AB_player(-1, game_state, 5)
+    cab_2 = C_AB_player(1, game_state, 5)
+    # AZ_MCTS_2= AlphaZeroMCTSPlayer(1000, game, 1, 1.5, 2)
+    game.play(MCTS_1, cab_2)
+    # game.play(cab_1, MCTS_2)
+    # game.play(MCTS_1, p3[0])
+    # game.play(p3[0], MCTS_2)
+    # game.play(p3[0], AZ_MCTS_2)
+    # dualAB(n_game=25,
+    #         bot1=p3[0],
+    #         bot1_name=p3[1],
+    #         depth=5)
+    
+    # for ver in range(1,2):
     #     args_Res['train'] = False
     #     args_Res['load_model_name'] = f'Resnet_model_{size_m}x{size_n}_{ver}.h5'
     #     p5 = [ResnetBOT(input_size_m=size_m,input_size_n=size_n,game=game,args=args_Res), f'resnet_{size_m}x{size_n}']
 
-    #     dual(n_game=35,
-    #         bot1=p5[0],
-    #         bot1_name=p5[1]+f'_{ver}',
-    #         bot2=p3[0],
-    #         bot2_name=p3[1])
+    #     # dual(n_game=35,
+    #     #     bot1=p5[0],
+    #     #     bot1_name=p5[1]+f'_{ver}',
+    #     #     bot2=p3[0],
+    #     #     bot2_name=p3[1])
 
-    #     dualAB(n_game=20,
+    #     dualAB(n_game=25,
     #         bot1=p5[0],
     #         bot1_name=p5[1]+f'_{ver}',
-    #         depth=3)
-    ab = AlphaBetaPlayer(1, game_state, 3)
-    game.play(p3[0], ab)
+    #         depth=5)
+    # print(game_state.board)
+    # ab = AlphaBetaPlayer(-1, game_state, 6)
+    # c_ab = C_AB_player(-1, game_state, 8)
+    # game.play(cab_1, cab_2, train=False)
     # game.play(p3[0], p3[0])
-
 
 
 if __name__ == "__main__":

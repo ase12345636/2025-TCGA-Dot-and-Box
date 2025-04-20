@@ -112,8 +112,7 @@ class DotsAndBox():
                 if verbose:
                     self.print_board()
         winner = GetWinner(self.state.board, self.state.p1_p2_scores)
-        if verbose:
-            self.print_board()
+        self.print_board()
 
         if (winner == 0):
             print("Tie!!!")

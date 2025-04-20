@@ -3,7 +3,6 @@ import random
 from copy import deepcopy
 from Dots_and_Box import *
 from RandomBot import *
-from Alpha.C_AB import C_AB_player
 
 # MCTS 節點類別，代表蒙地卡羅樹搜索中的每個節點
 class MCTSNode:
@@ -39,20 +38,20 @@ class MCTSPlayer:
         self.root_state.board = board
         self.root_state.current_player = player
 
-        if progress < 0.44:  # 開局
+        if progress < 0.45:  # 開局
             move = self.select_meth_bot.get_move(board, player)[0]
             return move, []
         elif progress < 0.7:  # 中盤
-            self.num_simulations = 17000
+            self.num_simulations = 17500
             self.max_depth = 20
         else:  # 終盤
-            self.num_simulations = 25000
+            self.num_simulations = 20000
             self.max_depth = 50
         
         if not self.root_state:
             raise ValueError("Game state not set")  # 若遊戲狀態未設置，則拋出錯誤
 
-        root = MCTSNode(self.root_state)  # 根節點為當前遊戲狀態的複製
+        root = MCTSNode(deepcopy(self.root_state))  # 根節點為當前遊戲狀態的複製
         # 進行多次模擬
         for _ in range(self.num_simulations):
             node = self.select(root)  # 選擇節點
@@ -124,25 +123,15 @@ class MCTSPlayer:
 
     # 選擇模擬中的移動
     def choose_simulation_move(self, game_state:STATE):
-        # 95% 貪心 + 5% 隨機
         rand = random.random()
-        if rand < 0.6:
+        if rand < 0.8:
             return self.select_meth_bot.get_move(game_state.board,game_state.current_player)[0]
-        elif rand < 0.8:
+        elif rand < 0.9:
             return Greedy_Bot(game_state.m, game_state.n).get_move(game_state.board,game_state.current_player)[0]
         else:
             return Random_Bot(game_state.m, game_state.n).get_move(game_state.board,game_state.current_player,verbose=False)[0]
-    # 評估遊戲狀態
-    # def evaluate(self, state:STATE):
-    #     my_score = state.p1_p2_scores[0] if self.symbol == -1 else state.p1_p2_scores[1]
-    #     opp_score = state.p1_p2_scores[1] if self.symbol == -1 else state.p1_p2_scores[0]
 
-    #     return (my_score - opp_score)
     def evaluate(self, state:STATE):
-        # if isGameOver(state.board):
-        #     winner = GetWinner(state.board, state.p1_p2_scores)
-        #     return 1.0 if winner == self.symbol else -1.0 if winner != 0 else 0.0
-        # else:
         total_boxes = (state.m-1)*(state.n-1)
         my_score = state.p1_p2_scores[0] if self.symbol == -1 else state.p1_p2_scores[1]
         opp_score = state.p1_p2_scores[1] if self.symbol == -1 else state.p1_p2_scores[0]
