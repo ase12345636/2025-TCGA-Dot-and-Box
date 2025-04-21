@@ -3,6 +3,7 @@ import random
 from copy import deepcopy
 from Dots_and_Box import *
 from RandomBot import *
+import time
 
 # MCTS 節點類別，代表蒙地卡羅樹搜索中的每個節點
 class MCTSNode:
@@ -29,7 +30,9 @@ class MCTSPlayer:
         self.select_meth_bot = Greedy_Bot_2(state.m, state.n)
 
     # 獲取下一步移動
-    def get_move(self, board, player):
+    def get_move(self, board, player, verbose = True):
+        current_time = time.time()
+
         total_moves = (self.root_state.m - 1) * self.root_state.n + self.root_state.m * (self.root_state.n - 1)
         remaining_moves = len(getValidMoves(self.root_state.board))
         progress = 1 - remaining_moves / total_moves
@@ -38,20 +41,28 @@ class MCTSPlayer:
         self.root_state.board = board
         self.root_state.current_player = player
 
+        if verbose:
+            print(f"Game progress: {progress}")
+            print(f"Max num_simulations: {self.num_simulations}")
+
         if progress < 0.45:  # 開局
             move = self.select_meth_bot.get_move(board, player)[0]
             return move, []
-        elif progress < 0.7:  # 中盤
-            self.num_simulations = 17500
-            self.max_depth = 20
+        elif progress < 0.6:
+            self.num_simulations = 15000
+        elif progress < 0.7:
+            self.num_simulations = 16000
+        elif progress < 0.8:
+            self.num_simulations = 17000
+        elif progress < 0.9:
+            self.num_simulations = 18000
         else:  # 終盤
-            self.num_simulations = 20000
-            self.max_depth = 50
+            self.num_simulations = 19000
 
         if not self.root_state:
             raise ValueError("Game state not set")  # 若遊戲狀態未設置，則拋出錯誤
 
-        root = MCTSNode(deepcopy(self.root_state))  # 根節點為當前遊戲狀態的複製
+        root = MCTSNode(self.root_state)  # 根節點為當前遊戲狀態的複製
         # 進行多次模擬
         for _ in range(self.num_simulations):
             node = self.select(root)  # 選擇節點
@@ -74,9 +85,13 @@ class MCTSPlayer:
         best_child = max(root.children, key=lambda c: c.score / c.visits if c.visits > 0 else -float('inf'))
         # best_child = sorted(root.children, key = lambda c: float(c.score)/c.visits)[-1]
         # best_child = max(root.children, key=lambda c: c.score)
-        print(f"MCTS best move: {best_child.move}, score: {best_child.score}, visits: {best_child.visits}")
-        for c in root.children:
-            print(f"{c.score}/{c.visits}")
+
+        end_time = time.time()
+        
+        if verbose:
+            print(f"MCTS best move: {best_child.move}, score: {best_child.score}, visits: {best_child.visits}, took {end_time - current_time:.6f} seconds")
+            for c in root.children:
+                print(f"{c.score}/{c.visits}")
         return best_child.move, []
 
     # 節點選擇過程
@@ -87,11 +102,13 @@ class MCTSPlayer:
 
     # 擴展節點
     def expand(self, node:MCTSNode):
+        random.shuffle(node.untried_moves)
+        # 從此節點狀態中可下且未被展開的move進行選擇
         move = node.untried_moves.pop()
         new_state = deepcopy(node.game_state)  # 複製當前遊戲狀態
         r, c = move
 
-        # 執行該移動
+        # 執行該移動 (expand)
         new_node_player = new_state.current_player
         new_state.current_player, score = make_move(new_state.board,r,c,new_state.current_player)
         if new_state.current_player == -1:
@@ -137,22 +154,21 @@ class MCTSPlayer:
         total_boxes = (state.m-1)*(state.n-1)
         my_score = state.p1_p2_scores[0] if self.symbol == -1 else state.p1_p2_scores[1]
         opp_score = state.p1_p2_scores[1] if self.symbol == -1 else state.p1_p2_scores[0]
-        if isGameOver(state.board):
-            winner = GetWinner(state.board, state.p1_p2_scores)
-            if winner == self.symbol:
-                return 1
-            elif winner == -self.symbol:
-                return -1
-            else:
-                return 0  # 平手
-        return (my_score - opp_score) / total_boxes
+        return (my_score - opp_score) / total_boxes        # if isGameOver(state.board):
+        #     winner = GetWinner(state.board, state.p1_p2_scores)
+        #     if winner == self.symbol:
+        #         return 1
+        #     elif winner == -self.symbol:
+        #         return -1
+        #     else:
+        #         return 0  # 平手
+        # return (my_score - opp_score) / total_boxes
 
 
     # 回傳模擬結果
     def backpropagate(self, node:MCTSNode, result):
         while node:
             node.visits += 1
-            # 正確處理玩家視角
             if node.parent:  # 非根節點
                 if node.player == self.symbol:
                     node.score += result
