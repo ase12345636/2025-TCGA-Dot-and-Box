@@ -47,7 +47,7 @@ class MCTSPlayer:
         else:  # 終盤
             self.num_simulations = 20000
             self.max_depth = 50
-        
+
         if not self.root_state:
             raise ValueError("Game state not set")  # 若遊戲狀態未設置，則拋出錯誤
 
@@ -75,6 +75,8 @@ class MCTSPlayer:
         # best_child = sorted(root.children, key = lambda c: float(c.score)/c.visits)[-1]
         # best_child = max(root.children, key=lambda c: c.score)
         print(f"MCTS best move: {best_child.move}, score: {best_child.score}, visits: {best_child.visits}")
+        for c in root.children:
+            print(f"{c.score}/{c.visits}")
         return best_child.move, []
 
     # 節點選擇過程
@@ -124,9 +126,9 @@ class MCTSPlayer:
     # 選擇模擬中的移動
     def choose_simulation_move(self, game_state:STATE):
         rand = random.random()
-        if rand < 0.8:
+        if rand < 0.4:
             return self.select_meth_bot.get_move(game_state.board,game_state.current_player)[0]
-        elif rand < 0.9:
+        elif rand < 0.8:
             return Greedy_Bot(game_state.m, game_state.n).get_move(game_state.board,game_state.current_player)[0]
         else:
             return Random_Bot(game_state.m, game_state.n).get_move(game_state.board,game_state.current_player,verbose=False)[0]
@@ -135,7 +137,15 @@ class MCTSPlayer:
         total_boxes = (state.m-1)*(state.n-1)
         my_score = state.p1_p2_scores[0] if self.symbol == -1 else state.p1_p2_scores[1]
         opp_score = state.p1_p2_scores[1] if self.symbol == -1 else state.p1_p2_scores[0]
-        return (my_score - opp_score) / total_boxes  # 动态归一化
+        if isGameOver(state.board):
+            winner = GetWinner(state.board, state.p1_p2_scores)
+            if winner == self.symbol:
+                return 1
+            elif winner == -self.symbol:
+                return -1
+            else:
+                return 0  # 平手
+        return (my_score - opp_score) / total_boxes
 
 
     # 回傳模擬結果
@@ -158,7 +168,7 @@ class MCTSPlayer:
     # 使用 UCT (Upper Confidence Bound) 選擇節點
     def uct_select(self, node:MCTSNode):
         if node.parent is None:
-            log_parent_visits = math.log(node.visits + 1e-6)  # 根节点的父节点是自己
+            log_parent_visits = math.log(node.visits + 1e-6)
         else:
             log_parent_visits = math.log(node.parent.visits + 1e-6)
         return max(node.children, key=lambda c: self.ucb1(c, log_parent_visits))
