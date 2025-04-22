@@ -1,10 +1,12 @@
 m = 5
 n = 5
+history_move = 8
 
 # batch_size = (m * (n - 1)) * 2
 # batch_size = (2*m-1)*(2*n-1)
 # batch_size = 1
 batch_size = 16
+
 '''
 type 0: normal;             input shape: m * n
 type 1: history_image;      input shape: m * n * total_move

@@ -45,9 +45,9 @@ class DaB_BaseModel():
         # Process infuelce
         # Type 0
         if (self.args['type'] == 0):
-            input_boards = np.array([np.array(board).reshape(self.w, self.h)
+            input_boards = np.array([np.array(board).reshape(self.w, self.h, self.c)
                                     for board in input_boards])
-            print(input_boards.shape)
+            # print(input_boards.shape)
 
         # Type 1
         elif (self.args['type'] == 1):
@@ -98,7 +98,8 @@ class DaB_BaseModel():
 
         # model_with_version
         model_file_path = f'models/{self.model_type}/{self.m}x{self.n}/{self.model_type}_model_{self.m}x{self.n}_1.h5'
-        base, extension = os.path.splitext(model_file_path) #extension = ".h5"
+        base, extension = os.path.splitext(
+            model_file_path)  # extension = ".h5"
         base = base[:-2]
         counter = 1
         while os.path.exists(model_file_path):
@@ -110,7 +111,7 @@ class DaB_BaseModel():
         except:
             print(f"Failed to save model to {model_file_path}")
 
-    def load_weights(self, load_model_name = None):
+    def load_weights(self, load_model_name=None):
         model_path = f'models/{self.model_type}/{self.m}x{self.n}/{self.model_name}'
         if load_model_name:
             model_path = f'models/{self.model_type}/{self.m}x{self.n}/{load_model_name}'
@@ -157,6 +158,7 @@ class DaB_BaseModel():
         keras.utils.plot_model(self.model.build_graph(), expand_nested=True, dpi=250,
                                show_shapes=True, to_file=file_path)
 
+
 class DaB_ResNet(DaB_BaseModel):
     def __init__(self, input_shape, args):
         super().__init__(input_shape, args)
@@ -165,6 +167,6 @@ class DaB_ResNet(DaB_BaseModel):
         self.model_type = f"Resnet"
 
         self.model = ResNet(self.w, self.h, self.c)
-        self.model.build((None, self.w, self.h))
+        self.model.build((None, self.w, self.h, self.c))
         self.model.compile(
             loss=['categorical_crossentropy'], optimizer=Adam(0.002))

@@ -1,6 +1,6 @@
 from Dots_and_Box import DotsAndBox as DaB
 from DeepLearning import ResnetBOT
-from arg import m, n, args_Res
+from arg import m, n, history_move, args_Res
 from RandomBot import *
 # from Alpha.AlphaBeta import AlphaBetaPlayer
 
@@ -17,7 +17,8 @@ game_state = STATE(
 
 game = DaB(game_state, True)
 # bot_CNN = CNNBOT(input_size_m=m, input_size_n=n, game=game, args=args_CNN)
-bot_Res = ResnetBOT(input_size_m=m, input_size_n=n, game=game, args=args_Res)
+bot_Res = ResnetBOT(input_size_m=m, input_size_n=n,
+                    input_size_c=history_move*2+1, game=game, args=args_Res)
 # bot_LSTM = LSTM_BOT(input_size_m=m, input_size_n=n, game=game, args=args_LSTM)
 # bot_ConvLSTM = ConvLSTM_BOT(
 #     input_size_m=m, input_size_n=n, game=game, args=args_ConvLSTM)
@@ -25,7 +26,7 @@ bot_Res = ResnetBOT(input_size_m=m, input_size_n=n, game=game, args=args_Res)
 #    input_size_m=m, input_size_n=n, game=game, args=args_Conv2Plus1D)
 
 
-args_Res['train'] = False    #True:開greedy, False:關
+args_Res['train'] = False  # True:開greedy, False:關
 args_Oppo = {
     'verbose': True,
     'type': 0,
