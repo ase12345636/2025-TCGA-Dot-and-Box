@@ -11,7 +11,7 @@ from arg import *
 from Alpha.C_AB import C_AB_player
 class BaseBot():
     # Initiallize
-    def __init__(self, input_size_m, input_size_n, game, args):
+    def __init__(self, input_size_m, input_size_n, game:DotsAndBox, args):
         self.input_size_m = input_size_m * 2 - 1
         self.input_size_n = input_size_n * 2 - 1
 
@@ -23,16 +23,50 @@ class BaseBot():
         self.history = []
 
     # Get move predicted by model
-    def get_move(self, para_board, player):
+    def get_move(self, para_board, player, verbose = True):
+        def encode_board(board):
+            b_board = np.zeros((self.input_size_m, self.input_size_n))
+            r_board = np.zeros((self.input_size_m, self.input_size_n))
+            for i in range(self.input_size_m):
+                for j in range(self.input_size_n):
+                    if board[i][j] == -1:
+                        b_board[i][j] = 1
+                    elif board[i][j] == 1:
+                        r_board[i][j] = 1
+                    else:
+                        continue
+            return b_board, r_board
+
         # board = self.preprocess_board(self.game.state.board)
         board = copy.deepcopy(para_board)
+
+        zero_board = np.zeros((self.input_size_m, self.input_size_n))
+        layers_boards = []
+        padd_num = 8 - len(self.game.history)
+        if padd_num > 0:
+            for _ in range(padd_num):
+                layers_boards.append(zero_board)
+                layers_boards.append(zero_board)
+            recent_move_history = self.game.history[:]
+            for board, pos, current_player in recent_move_history:
+                b_board, r_board = encode_board(board)
+                layers_boards.append(b_board)
+                layers_boards.append(r_board)
+        else:
+            eight_move_history = self.game.history[-8:]
+            for board, pos, current_player in eight_move_history:
+                b_board, r_board = encode_board(board)
+                layers_boards.append(b_board)
+                layers_boards.append(r_board)
+
+        layers_boards.append(np.full((self.input_size_m, self.input_size_n), player))
 
         # Type 0
         if (self.args['type'] == 0):
 
             # Predict move
             predict = self.model.predict(
-                np.expand_dims(board, axis=0).astype(float))
+                np.expand_dims(layers_boards, axis=0).astype(float))
 
         # Detect which move is valid
         valid_positions = getValidMoves(board)
@@ -46,9 +80,10 @@ class BaseBot():
         predict = (predict+1e-30) * valids
 
         # Get final prediction
-        total_moves = (self.game.state.m - 1) * self.game.state.n + self.game.state.m * (self.game.state.n - 1)
-        remaining_moves = len(getValidMoves(board))
-        progress = 1 - remaining_moves / total_moves
+        # total_moves = (self.game.state.m - 1) * self.game.state.n + self.game.state.m * (self.game.state.n - 1)
+        # remaining_moves = len(getValidMoves(board))
+        # progress = 1 - remaining_moves / total_moves
+
         position = np.argmax(predict)
         # if  progress < 0.3 and self.args['train'] == True:
         #     print("random")
@@ -59,7 +94,7 @@ class BaseBot():
         #     position = np.argmax(predict)
 
         # 把非零位置轉換成坐標系，當成validmoves由大到小排序進入greedyalg中
-        if self.args['train'] and progress < 0.8:
+        if self.args['train']:
             non_zero_predict = np.argsort(predict)[np.sum(predict == 0)-len(predict):][::-1]
             predict_moves = []
             for n_z_p in non_zero_predict:
@@ -71,7 +106,6 @@ class BaseBot():
             if self.args['train'] and (greedy_move := GreedAlg(board=greedy_board, ValidMoves=predict_moves, verbose=True)):
                 r, c = greedy_move
                 position = r*self.input_size_n+c
-
         # Append current board to history
         if self.collect_gaming_data:
             tmp = np.zeros_like(predict)
@@ -82,6 +116,8 @@ class BaseBot():
 
         position = (position // self.input_size_n,
                     position % self.input_size_n)
+        if verbose:
+            print(f"Predict position: {position}")
         return position, [board, tmp, player]
 
     # Training model based on history
@@ -90,33 +126,50 @@ class BaseBot():
         def gen_data(type: 0, self_first=True): # self_first: 自己為先手
 
             # Data augmentation by getting symmetries
-            def getSymmetries(board, pi):
-                pi_board = np.reshape(
-                    pi, (self.input_size_m, self.input_size_n))
-                symmetries = []
-                for i in range(4):
-                    for flip in [True, False]:
-                        newB = np.rot90(board, i)
-                        newPi = np.rot90(pi_board, i)
-                        if flip:
-                            newB = np.fliplr(newB)
-                            newPi = np.fliplr(newPi)
-                        symmetries.append((newB, list(newPi.ravel())))
-                return symmetries
+            def AlphaGoData(history):
+                # 遊戲5x5 => boardsize = 7x7    self.input_size_m*self.input_size_n
+                # history:[[board1, posistion, player_to_move], [board2, posistion, player_to_move], ......]
+                # x:當前board+前7盤(共8盤), 各拆成紅跟藍=>16盤，再加1盤全 1or-1 => 7x7x17
+                # y:當前board對印的position(one-hot-encoding) => 7x7
 
-            # Split data and get 8 symmetries of history
-            def splitSymmetries(sym):
-                split_sym = []
-                for i in range(8):
-                    temp = []
-                    j = i
-                    while (j < len(sym)):
-                        temp.append(sym[j])
-                        j += 8
+               # 先把所有board拆成兩個選手位置圖(blueBoard, redBoard)
+                alpha_boards = []
+                data_y = []
+                for steps, (board, position, current_player) in enumerate(history):
+                    blue_board = np.zeros_like(board)
+                    red_board = np.zeros_like(board)
+                    for i in range(self.input_size_m):
+                        for j in range(self.input_size_n):
+                            if board[i][j] == -1:
+                                blue_board[i][j] = 1
+                            elif board[i][j] == 1:
+                                red_board[i][j] = 1
+                            else:
+                                continue
+                    alpha_boards.append((blue_board, red_board))    #[(b,r), (b,r), (b,r)....]
+                    data_y.append((position,current_player))        #[(probs, player), (probs, player), (probs, player)....]
 
-                    split_sym.append(temp)
+                # 在第一步之前padd 7個0矩陣tuple
+                zeropadd = np.zeros((self.input_size_m, self.input_size_n))
+                for _ in range(7):
+                    alpha_boards = [(zeropadd, zeropadd)] + alpha_boards
 
-                return split_sym
+                x_data = []
+                for idx in range(7, len(alpha_boards)):
+                    step_data = alpha_boards[idx-7 : idx+1]  # 8 個步驟
+                    layers = []
+                    for b_board, r_board in step_data:
+                        layers.append(b_board)
+                        layers.append(r_board)
+                    # 第17層是當前要下棋的玩家
+                    player_to_move = 1 if data_y[idx - 7][1] == 1 else -1  # 注意 offset
+                    layers.append(np.full((self.input_size_m, self.input_size_n), player_to_move))
+                    # 組成 (17, 7, 7)
+                    x_tensor = np.stack(layers, axis=0)
+                    x_data.append(x_tensor)
+
+                return x_data, data_y
+
 
             # Initiallize history
             self.history = []
@@ -155,16 +208,22 @@ class BaseBot():
             history = []
             self.history = copy.deepcopy(self.game.history)
             print(f"history len:{len(self.history)}")
+
             # Data augmentation
-            for step, (board, probs, player) in enumerate(self.history):
-                sym = getSymmetries(board, probs)
-                for b, p in sym:
-                    history.append([b, p, player])
+            history = AlphaGoData(self.game.history)
+            # (xdata, (probs, player))
+
             self.history.clear()
             game_result = GetWinner(self.game.state.board, self.game.state.p1_p2_scores)
             # Type 0
-            if (type == 0):
-                return [(x[0], x[1]) for x in history if (game_result == 0 or x[2] == game_result)]
+            training_data = []
+            x, y = history
+            for idx in range(len(y)):
+                if game_result == y[idx][1] or game_result ==0:
+                    print(f"x shape: {x[idx].shape}, y shape: {y[idx][0].shape}")
+                    training_data.append([x[idx], y[idx][0]])
+
+            return training_data
 
         # Allow collecting history
         self.collect_gaming_data = True
@@ -191,7 +250,7 @@ class ResnetBOT(BaseBot):
         super().__init__(input_size_m, input_size_n, game, args)
 
         self.model = DaB_ResNet(input_shape=(
-            self.input_size_m, self.input_size_n, self.total_move), args=args)
+            self.input_size_m, self.input_size_n, 17), args=args)
         try:
             self.model.load_weights(self.args['load_model_name'])
             # print(f'{self.model.model_name} loaded')
