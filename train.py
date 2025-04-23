@@ -26,7 +26,7 @@ bot_Res = ResnetBOT(input_size_m=m, input_size_n=n,
 #    input_size_m=m, input_size_n=n, game=game, args=args_Conv2Plus1D)
 
 
-args_Res['train'] = False  # True:開greedy, False:關
+args_Res['train'] = True  # True:開greedy, False:關
 args_Oppo = {
     'verbose': True,
     'type': 0,

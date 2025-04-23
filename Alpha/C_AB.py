@@ -23,7 +23,7 @@ class C_AB_player:
         self.symbol = symbol
         self.state = state
         self.max_depth = max_depth
-        self.select_meth_bot = Greedy_Bot_2(self.state.m, self.state.n, verbose=True)
+        self.select_meth_bot = Greedy_Bot(self.state.m, self.state.n, verbose=True)
         if method_bot:
             self.select_meth_bot = method_bot
     def get_move(self, board, player, verbose = True):
@@ -38,7 +38,7 @@ class C_AB_player:
         remaining_moves = len(getValidMoves(self.state.board))
         progress = 1 - remaining_moves / total_moves
 
-        if progress < 0.45:  # 開局
+        if progress < 0.4:  # 開局
             move = self.select_meth_bot.get_move(board, player)[0]
             r,c = move
             position = r*self.state.board_cols+c
@@ -47,7 +47,15 @@ class C_AB_player:
             copyboard = copy.deepcopy(self.state.board)
 
             return move, [copyboard, tmp, player]
-        elif progress > 0.8:
+        elif progress < 0.5:
+            self.max_depth = 5
+        elif progress < 0.6:
+            self.max_depth = 6
+        elif progress < 0.7:
+            self.max_depth = 8
+        elif progress < 0.8:
+            self.max_depth = 9
+        else:
             self.max_depth = 10
 
         visited_pos = []
@@ -90,7 +98,7 @@ class C_AB_player:
         position = r*self.state.board_cols+c
         tmp=np.zeros(one_d_len)
         tmp[position] = 1.0
-        copyboard = copy.deepcopy(self.state.board)
+        copyboard = copy.deepcopy(board)
         end_time = time.time()
         best_move_str = ANSI_string(f"{best_move}", "green")
         if verbose:

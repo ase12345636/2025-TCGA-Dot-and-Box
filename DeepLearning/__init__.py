@@ -41,7 +41,7 @@ class BaseBot():
 
         # board = self.preprocess_board(self.game.state.board)
         board = copy.deepcopy(para_board)
-
+        
         zero_board = np.zeros((self.input_size_m, self.input_size_n))
         layers_boards = []
         padd_num = 8 - len(self.game.history)
@@ -50,8 +50,8 @@ class BaseBot():
                 layers_boards.append(zero_board)
                 layers_boards.append(zero_board)
             recent_move_history = self.game.history[:]
-            for board, pos, current_player in recent_move_history:
-                b_board, r_board = encode_board(board)
+            for _board, pos, current_player in recent_move_history:
+                b_board, r_board = encode_board(_board)
                 layers_boards.append(b_board)
                 layers_boards.append(r_board)
         else:
@@ -63,31 +63,32 @@ class BaseBot():
 
         layers_boards.append(
             np.full((self.input_size_m, self.input_size_n), player))
-
+        
+        # print(layers_boards)
+        
         # Type 0
         if (self.args['type'] == 0):
 
             # Predict move
             predict = self.model.predict(
                 np.expand_dims(layers_boards, axis=0).astype(float))
-
         # Detect which move is valid
-        valid_positions = getValidMoves(board)
+        valid_positions = getValidMoves(para_board)
         valids = np.zeros(
             (self.input_size_m * self.input_size_n,), dtype='int')
         for pos in valid_positions:
             idx = pos[0] * self.input_size_n + pos[1]
             valids[idx] = 1
-
         # Filtered invalid move and avoid invalid loop
-        predict = (predict+1e-30) * valids
 
+        predict = (predict+1e-30) * valids
         # Get final prediction
         # total_moves = (self.game.state.m - 1) * self.game.state.n + self.game.state.m * (self.game.state.n - 1)
         # remaining_moves = len(getValidMoves(board))
         # progress = 1 - remaining_moves / total_moves
 
         position = np.argmax(predict)
+
         # if  progress < 0.3 and self.args['train'] == True:
         #     print("random")
         #     position = np.random.choice(np.argsort(predict)[-2:])
@@ -98,16 +99,7 @@ class BaseBot():
 
         # 把非零位置轉換成坐標系，當成validmoves由大到小排序進入greedyalg中
         if self.args['train']:
-            non_zero_predict = np.argsort(
-                predict)[np.sum(predict == 0)-len(predict):][::-1]
-            predict_moves = []
-            for n_z_p in non_zero_predict:
-                nonzeropos = (n_z_p // self.input_size_n,
-                              n_z_p % self.input_size_n)
-                predict_moves.append(nonzeropos)
-
-            greedy_board = copy.deepcopy(board)
-            if self.args['train'] and (greedy_move := GreedAlg(board=greedy_board, ValidMoves=predict_moves, verbose=True)):
+            if self.args['train'] and (greedy_move := GreedAlg(board=copy.deepcopy(para_board), ValidMoves=getValidMoves(para_board), verbose=True)):
                 r, c = greedy_move
                 position = r*self.input_size_n+c
         # Append current board to history
@@ -120,9 +112,11 @@ class BaseBot():
 
         position = (position // self.input_size_n,
                     position % self.input_size_n)
+        copy_board = copy.deepcopy(para_board)
+
         if verbose:
             print(f"Predict position: {position}")
-        return position, [board, tmp, player]
+        return position, [copy_board, tmp, player]
 
     # Training model based on history
     def self_play_train(self, oppo=None):
@@ -131,15 +125,16 @@ class BaseBot():
 
             # Data augmentation by getting symmetries
             def AlphaGoData(history):
-                # 遊戲5x5 => boardsize = 7x7    self.input_size_m*self.input_size_n
+                # 遊戲5x5 => boardsize = 9x9    self.input_size_m*self.input_size_n
                 # history:[[board1, posistion, player_to_move], [board2, posistion, player_to_move], ......]
-                # x:當前board+前7盤(共8盤), 各拆成紅跟藍=>16盤，再加1盤全 1or-1 => 7x7x17
-                # y:當前board對印的position(one-hot-encoding) => 7x7
+                # x:當前board+前7盤(共8盤), 各拆成紅跟藍=>16盤，再加1盤全 1or-1 => 9x9x17
+                # y:當前board對印的position(one-hot-encoding) => 9x9 = 81 (1維)
 
                # 先把所有board拆成兩個選手位置圖(blueBoard, redBoard)
                 alpha_boards = []
                 data_y = []
                 for steps, (board, position, current_player) in enumerate(history):
+                    print_board(board, self.input_size_m, self.input_size_n)
                     blue_board = np.zeros_like(board)
                     red_board = np.zeros_like(board)
                     for i in range(self.input_size_m):
