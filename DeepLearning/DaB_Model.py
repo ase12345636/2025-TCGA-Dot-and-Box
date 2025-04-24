@@ -36,7 +36,7 @@ class DaB_BaseModel():
 
     # Predict output
     def predict(self, board):
-        return self.model.predict(board.astype(float))[0]
+        return self.model.predict(board.astype(float), verbose=0)[0]
 
     # Fit model
     def fit(self, data, batch_size, epochs):

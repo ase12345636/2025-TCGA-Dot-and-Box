@@ -91,3 +91,19 @@ class ResNet(BaseModel):
     def build_graph(self):
         x = layers.Input(shape=(self.w, self.h, self.c))
         return keras.Model(inputs=[x], outputs=self.call(x))
+
+class ValueNet(ResNet):
+    def __init__(self, w, h, c):
+        super(ValueNet, self).__init__(w, h, c)
+        self.num_res_block = 3
+
+        # 這裡把 pi 層改成 v 層（實數輸出）
+        self.v = layers.Dense(1, activation='tanh', name='v')  # 輸出一個 [-1, 1] 之間的數
+
+    def call(self, x):
+        x = self.reshape(x)
+        x = self.resnet_v1(inputs=x, num_res_blocks=self.num_res_block)
+        x = self.gap(x)
+        value = self.v(x)
+        return value
+
