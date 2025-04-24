@@ -8,8 +8,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../')
 from Dots_and_Box import *
 from RandomBot import Random_Bot,Greedy_Bot
 from DeepLearning import *
-from Alpha.MCTS import MCTSPlayer
 from Alpha.AlphaBeta import AlphaBetaPlayer
+from Alpha.C_AB import C_AB_player
 from arg import *
 
 args_Res['train'] = False
@@ -56,7 +56,7 @@ class GameWindow(QMainWindow):
         self.P2_score_label.setGeometry(650, 150, 175, 25)
         self.P2_score_label.setFont(self.font)  # 設置標籤字型
 
-        player_list = ["人類","Random","貪婪","MCTS","AlphaBeta","Resnet"]
+        player_list = ["人類","Random","貪婪","C_AB","AlphaBeta","Resnet"]
         # 玩家1下拉選單
         self.p1_combo_box = QComboBox(self)
         self.p2_combo_box = QComboBox(self)
@@ -135,7 +135,7 @@ class GameWindow(QMainWindow):
                 args_Res['load_model_name'] = f'Resnet_model_{m}x{n}_{ver}.h5'
             else:
                 args_Res['load_model_name'] = None
-            bot = ResnetBOT(self.game.state.m, self.game.state.n, self.game, args_Res)
+            bot = ResnetBOT(input_size_m=m, input_size_n=n,input_size_c=history_move*2+1, game=self.game, args=args_Res)
 
         return bot
 
@@ -150,11 +150,13 @@ class GameWindow(QMainWindow):
 
     def OnClickStartButton(self):
         #初始化遊戲
+        zero_board = np.zeros((2*self.game_row-1, 2*self.game_col-1))
         game_state = STATE(
             p1_p2_scores=[0, 0],
             board=[[]],
             m=self.game_row,
             n=self.game_col,
+            history_8board=deque([zero_board.copy() for _ in range(history_move)], maxlen=history_move),  # 預填8個零矩陣
             current_player=-1
         )
 
@@ -177,16 +179,21 @@ class GameWindow(QMainWindow):
             self.p1 = Random_Bot(self.game.state.m, self.game.state.n)
         elif self.p1 == "貪婪":
             self.p1 = Greedy_Bot(self.game.state.m, self.game.state.n)
-        elif self.p1 == "MCTS":
-            self.p1 = MCTSPlayer(num_simulations=1000, exploration_weight=1.3, max_depth=100, selfFirst=True)
-            self.p1.game_state = self.game
+        elif self.p1 == "C_AB":
+            ver = self.p1_ver_input_box.text()
+            self.p1 = C_AB_player(-1,self.game.state)
+            if ver:
+                self.p1.max_depth = int(ver)
         elif self.p1 == "AlphaBeta":
+            ver = self.p1_ver_input_box.text()
             self.p1 = AlphaBetaPlayer(-1,self.game.state)
+            if ver:
+                self.p1.max_depth = int(ver)
         else:
             ver = self.p1_ver_input_box.text()
             self.botOppo = self.loadBOT(modelBase=self.p1,m = self.game.state.m, n = self.game.state.n, ver=ver)
             self.p1 = self.botOppo
-        
+
         self.p2 = self.p2_combo_box.currentText()
         if self.p2 == "人類":
             self.p2 = 1
@@ -194,11 +201,16 @@ class GameWindow(QMainWindow):
             self.p2 = Random_Bot(self.game.state.m, self.game.state.n)
         elif self.p2 == "貪婪":
             self.p2 = Greedy_Bot(self.game.state.m, self.game.state.n)
-        elif self.p2 == "MCTS":
-            self.p2 =MCTSPlayer(num_simulations=1000, exploration_weight=1.3, max_depth=100, selfFirst=False)
-            self.p2.game_state = self.game
+        elif self.p2 == "C_AB":
+            ver = self.p2_ver_input_box.text()
+            self.p2 = C_AB_player(1,self.game.state)
+            if ver:
+                self.p2.max_depth = int(ver)
         elif self.p2 == "AlphaBeta":
+            ver = self.p2_ver_input_box.text()
             self.p2 = AlphaBetaPlayer(1,self.game.state)
+            if ver:
+                self.p2.max_depth = int(ver)
         else:
             ver = self.p2_ver_input_box.text()
             self.botOppo = self.loadBOT(modelBase=self.p2,m = self.game.state.m, n = self.game.state.n, ver=ver)
@@ -211,6 +223,7 @@ class GameWindow(QMainWindow):
 
     def game_loop(self):
         if isGameOver(self.game.state.board):
+            print(len(self.game.history))
             winner = GetWinner(self.game.state.board, self.game.state.p1_p2_scores)
             if winner == -1:
                 self.winner_label.setText("Player 1")
@@ -235,6 +248,7 @@ class GameWindow(QMainWindow):
                     self.game.state.p1_p2_scores[0] += score
                 elif self.game.state.current_player == 1:
                     self.game.state.p1_p2_scores[1] += score
+                self.game.state.history_8board.append(self.game.state.board)
                 self.update()
                 self.mouse_events_enabled = False
         elif self.p1 != -1 and self.p2 == 1:    # p1機器, p2人類
@@ -253,9 +267,11 @@ class GameWindow(QMainWindow):
         elif self.p1 != -1 and self.p2 != 1:    # p1, p2皆為機器
             self.mouse_events_enabled = False
             if self.game.state.current_player == -1:
-                r, c = self.p1.get_move(self.game.state.board, self.game.state.current_player)[0]
+                (r, c), his= self.p1.get_move(self.game.state.board, self.game.state.current_player)
+                self.game.history.append(his)
             else:
-                r, c = self.p2.get_move(self.game.state.board, self.game.state.current_player)[0]
+                (r, c), his = self.p2.get_move(self.game.state.board, self.game.state.current_player)
+                self.game.history.append(his)
             self.game.state.current_player,score = make_move(self.game.state.board, r, c, self.game.state.current_player)
             if self.game.state.current_player == -1:
                 self.game.state.p1_p2_scores[0] += score

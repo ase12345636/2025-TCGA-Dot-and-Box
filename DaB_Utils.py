@@ -1,3 +1,41 @@
+def ANSI_string(s="", color=None, background=None, bold=False):
+    colors = {
+        'black': '\033[30m',
+        'red': '\033[31m',
+        'green': '\033[32m',
+        'yellow': '\033[33m',
+        'blue': '\033[34m',
+        'magenta': '\033[35m',
+        'cyan': '\033[36m',
+        'white': '\033[37m',
+        'reset': '\033[0m'
+    }
+
+    background_colors = {
+        'black': '\033[40m',
+        'red': '\033[41m',
+        'green': '\033[42m',
+        'yellow': '\033[43m',
+        'blue': '\033[44m',
+        'magenta': '\033[45m',
+        'cyan': '\033[46m',
+        'white': '\033[47m',
+        'reset': '\033[0m',
+        'gray': '\033[100m',  # 新增的灰色背景
+        'light_gray': '\033[47m'  # 新增的淺灰色背景
+    }
+
+    styles = {
+        'bold': '\033[1m',
+        'reset': '\033[0m'
+    }
+    color_code = colors[color] if color in colors else ''
+    background_code = background_colors[background] if background in colors else ''
+    bold_code = styles['bold'] if bold else ''
+
+    return f"{color_code}{background_code}{bold_code}{s}{styles['reset']}"
+
+
 def isValid(board, r, c):
     if board[r][c] == 0:
         return True
@@ -69,3 +107,26 @@ def GetWinner(board, p1_p2_scores):
         else:
             return 0
     return None
+
+
+def print_board(board, board_rows, board_cols):
+    for i in range(board_rows):
+        for j in range(board_cols):
+            value = board[i][j]
+            if value == 0:
+                print(' ', end='')
+            elif value in [-1, 1]:  # 處理先手和後手邊
+                color = 'blue' if value == -1 else 'red'
+                if i % 2 == 0:  # 偶數列 -> 水平線
+                    print(ANSI_string(s='-', color=color), end='')
+                else:  # 奇數列 -> 垂直線
+                    print(ANSI_string(s='|', color=color), end='')
+            elif value == 5:  # 頂點
+                print('o', end='')
+            elif value in [7, 9]:  # 處理先手和後手佔領
+                background = 'blue' if value == 7 else 'red'
+                print(ANSI_string(s=str(value), background=background), end='')
+            elif value == 8:
+                print(' ', end='')
+        print()
+    print("="*(board_cols))

@@ -7,14 +7,15 @@ from RandomBot import *
 size_m = m
 size_n = n
 
+zero_board = np.zeros((2*size_m-1, 2*size_n-1))
 game_state = STATE(
     p1_p2_scores=[0, 0],
     board=[[]],
     m=size_m,
     n=size_n,
-    current_player=-1
+    current_player=-1,
+    history_8board=deque([zero_board.copy() for _ in range(history_move)], maxlen=history_move)  # 預填8個零矩陣
 )
-
 game = DaB(game_state, True)
 # bot_CNN = CNNBOT(input_size_m=m, input_size_n=n, game=game, args=args_CNN)
 bot_Res = ResnetBOT(input_size_m=m, input_size_n=n,

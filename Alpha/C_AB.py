@@ -58,6 +58,11 @@ class C_AB_player:
         else:
             self.max_depth = 10
 
+        # # 先手劣勢，多搜尋一層
+        # if self.symbol == -1:
+        #     self.max_depth += 1
+
+
         visited_pos = []
         valid_moves = getValidMoves(board)
         for _ in range(len(valid_moves)):
@@ -75,6 +80,8 @@ class C_AB_player:
                     new_state.p1_p2_scores[0] += score
                 elif new_state.current_player == 1:
                     new_state.p1_p2_scores[1] += score
+                new_state.history_8board.pop()
+                new_state.history_8board.append(new_state.board)
 
                 C_new_state = PyState()
                 C_new_state.set_dimensions(new_state.m, new_state.n, new_state.board_rows, new_state.board_cols)  # m, n, board_rows, board_cols

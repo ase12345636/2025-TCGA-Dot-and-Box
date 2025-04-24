@@ -24,6 +24,46 @@ class BaseBot():
         self.collect_gaming_data = True
         self.history = []
 
+    # 針對某狀態進行評估
+    def PredictPolicy(self, state:STATE):
+        predict_state = copy.deepcopy(state)
+        def encode_board(board):
+            b_board = np.zeros((self.input_size_m, self.input_size_n))
+            r_board = np.zeros((self.input_size_m, self.input_size_n))
+            for i in range(self.input_size_m):
+                for j in range(self.input_size_n):
+                    if board[i][j] == -1:
+                        b_board[i][j] = 1
+                    elif board[i][j] == 1:
+                        r_board[i][j] = 1
+                    else:
+                        continue
+            return b_board, r_board
+
+        layers_boards = []
+        for board in predict_state.history_8board:
+            b_board, r_board = encode_board(board)
+            layers_boards.append(b_board)
+            layers_boards.append(r_board)
+
+        layers_boards.append(
+            np.full((self.input_size_m, self.input_size_n), predict_state.current_player))
+
+        predict = self.model.predict(
+                np.expand_dims(layers_boards, axis=0).astype(float))
+
+        valid_positions = getValidMoves(state.board)
+        valids = np.zeros(
+            (self.input_size_m * self.input_size_n,), dtype='int')
+        for pos in valid_positions:
+            idx = pos[0] * self.input_size_n + pos[1]
+            valids[idx] = 1
+
+        # Filtered invalid move and avoid invalid loop
+        predict = (predict+1e-30) * valids
+
+        return predict
+
     # Get move predicted by model
     def get_move(self, para_board, player, verbose=True):
         def encode_board(board):
@@ -41,7 +81,7 @@ class BaseBot():
 
         # board = self.preprocess_board(self.game.state.board)
         board = copy.deepcopy(para_board)
-        
+
         zero_board = np.zeros((self.input_size_m, self.input_size_n))
         layers_boards = []
         padd_num = 8 - len(self.game.history)
@@ -63,9 +103,9 @@ class BaseBot():
 
         layers_boards.append(
             np.full((self.input_size_m, self.input_size_n), player))
-        
+
         # print(layers_boards)
-        
+
         # Type 0
         if (self.args['type'] == 0):
 
@@ -134,7 +174,7 @@ class BaseBot():
                 alpha_boards = []
                 data_y = []
                 for steps, (board, position, current_player) in enumerate(history):
-                    print_board(board, self.input_size_m, self.input_size_n)
+                    # print_board(board, self.input_size_m, self.input_size_n)
                     blue_board = np.zeros_like(board)
                     red_board = np.zeros_like(board)
                     for i in range(self.input_size_m):
@@ -187,24 +227,17 @@ class BaseBot():
             # else:   # 自行對下
             #     self.game.play(self, self,train = True)
 
-            # 改成自身 VS AB輪流對下
-            if self_first:
-                print('Self first')
-                AB = C_AB_player(symbol=1,  # AB做後手
+            # 改成AB VS AB輪流對下
+            AB1 = C_AB_player(symbol=-1,  # AB做先手
                                  state=self.game.state,
                                  max_depth=6
                                  )
-                self.game.play(self, AB, train=True, verbose=False)
-            elif not self_first:   # AB先手
-                print('AB first')
-                AB = C_AB_player(symbol=-1,  # AB做先手
+            AB2 = C_AB_player(symbol=1,  # AB做後手
                                  state=self.game.state,
                                  max_depth=6
                                  )
-                self.game.play(AB, self, train=True, verbose=False)
+            self.game.play(AB1, AB2, train=True, verbose=False)
 
-            for i in range(len(self.history)):
-                print(self.history[i][0])
 
             # Process history data
             history = []
@@ -223,7 +256,7 @@ class BaseBot():
             x, y = history
             for idx in range(len(y)):
                 if game_result == y[idx][1] or game_result == 0:
-                    # print(f"x shape: {x[idx].shape}, y shape: {y[idx][0].shape}")
+                    print(f"x shape: {x[idx].shape}, y shape: {y[idx][0].shape}")
                     training_data.append([x[idx], y[idx][0]])
 
             return training_data
@@ -260,3 +293,4 @@ class ResnetBOT(BaseBot):
             # print(f'{self.model.model_name} loaded')
         except Exception as e:
             print(f'No model exists, \n{e}')
+
