@@ -41,10 +41,6 @@ class MCTSPlayer:
         self.root_state.board = board
         self.root_state.current_player = player
 
-        if verbose:
-            print(f"Game progress: {progress}")
-            print(f"Max num_simulations: {self.num_simulations}")
-
         if progress < 0.45:  # 開局
             move = self.select_meth_bot.get_move(board, player)[0]
             return move, []
@@ -59,12 +55,17 @@ class MCTSPlayer:
         else:  # 終盤
             self.num_simulations = 19000
 
+        if verbose:
+            print(f"Game progress: {progress}")
+            print(f"Max num_simulations: {self.num_simulations}")
+
         if not self.root_state:
             raise ValueError("Game state not set")  # 若遊戲狀態未設置，則拋出錯誤
 
         root = MCTSNode(self.root_state)  # 根節點為當前遊戲狀態的複製
         # 進行多次模擬
         for _ in range(self.num_simulations):
+            # print(_)
             node = self.select(root)  # 選擇節點
 
             # 從node往下擴展
@@ -87,7 +88,7 @@ class MCTSPlayer:
         # best_child = max(root.children, key=lambda c: c.score)
 
         end_time = time.time()
-        
+
         if verbose:
             print(f"MCTS best move: {best_child.move}, score: {best_child.score}, visits: {best_child.visits}, took {end_time - current_time:.6f} seconds")
             for c in root.children:
@@ -115,6 +116,7 @@ class MCTSPlayer:
             new_state.p1_p2_scores[0] += score
         elif new_state.current_player == 1:
             new_state.p1_p2_scores[1] += score
+        new_state.history_8board.append(new_state.board)
 
         new_node = MCTSNode(new_state, parent=node, move=move, player=new_node_player)  # 創建新節點
         node.children.append(new_node)  # 將新節點添加為子節點
@@ -124,7 +126,6 @@ class MCTSPlayer:
     def simulate(self, game_state:STATE):
         state = deepcopy(game_state)  # 複製遊戲狀態
         depth = 0
-
         # 以state為遊戲狀態往下模擬，以self.select_meth_bot進行雙方對弈模擬
         while not isGameOver(state.board):  # 直到遊戲結束或達到最大深度
             move = self.choose_simulation_move(state)  # 選擇模擬中的移動
@@ -137,13 +138,13 @@ class MCTSPlayer:
                 state.p1_p2_scores[0] += score
             elif state.current_player == 1:
                 state.p1_p2_scores[1] += score
-
+            state.history_8board.append(state.board)
         return self.evaluate(state)  # 對遊戲結束或是達終止條件的state進行評分
 
     # 選擇模擬中的移動
     def choose_simulation_move(self, game_state:STATE):
         rand = random.random()
-        if rand < 0.4:
+        if rand < 0.6:
             return self.select_meth_bot.get_move(game_state.board,game_state.current_player)[0]
         elif rand < 0.8:
             return Greedy_Bot(game_state.m, game_state.n).get_move(game_state.board,game_state.current_player)[0]
