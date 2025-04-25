@@ -287,7 +287,7 @@ def main():
     #         bot1_name=p3[1],
     #         depth=5)
 
-    for ver in range(4,5):
+    for ver in range(5,6):
         args_Res['train'] = False
         args_Res['load_model_name'] = f'Resnet_model_{size_m}x{size_n}_{ver}.h5'
         p5 = [ResnetBOT(input_size_m=m, input_size_n=n,input_size_c=history_move*2+1, game=game, args=args_Res), f'resnet_{size_m}x{size_n}']

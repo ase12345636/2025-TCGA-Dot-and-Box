@@ -1,7 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 
-folder_path = 'game_record\\greedy\\4x4'
+folder_path = 'game_record\\random\\5x5'
 result_first = []
 result_second = []
 result_total = []
