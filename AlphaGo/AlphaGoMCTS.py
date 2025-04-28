@@ -35,7 +35,7 @@ class AlphaGoMCTSPlayer:
         self.max_depth = max_depth  # 模擬的最大深度
         self.root_state = game.state  # 遊戲狀態
         self.symbol = symbol
-        self.select_meth_bot = ResnetBOT(input_size_m=m, input_size_n=n,input_size_c=history_move*2+1, game=game, args=args_Res)
+        self.select_meth_bot = ResnetBOT(input_size_m=m, input_size_n=n, game=game, args=args_Res)
     # 獲取下一步移動
     def get_move(self, board, player, verbose = True):
         current_time = time.time()
@@ -44,7 +44,7 @@ class AlphaGoMCTSPlayer:
         remaining_moves = len(getValidMoves(self.root_state.board))
         progress = 1 - remaining_moves / total_moves
 
-         # 更新當前遊戲狀態
+        # 更新當前遊戲狀態
         self.root_state.board = board
         self.root_state.current_player = player
 
@@ -71,7 +71,7 @@ class AlphaGoMCTSPlayer:
         root = MCTSNode(self.root_state)  # 根節點為當前遊戲狀態的複製
         # 進行多次模擬
         for _ in range(self.num_simulations):
-            print(f"Simulation: {_}")
+            # print(f"Simulation: {_}")
             node = self.select(root)  # 選擇節點
             # 選擇節點直到不能選為止
             if not isGameOver(node.game_state.board) and node.untried_moves:
@@ -101,7 +101,6 @@ class AlphaGoMCTSPlayer:
 
     # 節點選擇過程
     def select(self, node:MCTSNode):
-        
         while node.untried_moves == [] and node.children != []:
             node = self.puct_select(node)
 
@@ -109,7 +108,6 @@ class AlphaGoMCTSPlayer:
 
     # 擴展節點
     def expand(self, node: MCTSNode):
-        
         random.shuffle(node.untried_moves)
         # 從此節點狀態中可下且未被展開的move進行選擇
         move = node.untried_moves.pop()
@@ -118,9 +116,9 @@ class AlphaGoMCTSPlayer:
 
         # 預測當前狀態所有可行步的機率
         if self.select_meth_bot is not None:
-            policy = self.select_meth_bot.PredictPolicy(new_state)
+            policy = self.select_meth_bot.PredictPolicy(new_state.board)    # 用policyNet得到每個位置的機率分布
             move_idx = r*new_state.board_cols + c
-            new_prior = policy[move_idx]
+            new_prior = policy[move_idx]    # 把此步的機率標記進該節點中
 
         else:
             # 沒有 policy_net，則平均分配
@@ -147,7 +145,7 @@ class AlphaGoMCTSPlayer:
     def simulate(self, game_state:STATE):
         state = deepcopy(game_state)  # 複製遊戲狀態
         depth = 0
-
+        
         # 以state為遊戲狀態往下模擬，以self.select_meth_bot進行雙方對弈模擬
         while not isGameOver(state.board):  # 直到遊戲結束或達到最大深度
             move = self.choose_simulation_move(state)  # 選擇模擬中的移動
@@ -168,8 +166,8 @@ class AlphaGoMCTSPlayer:
     # 選擇模擬中的移動
     def choose_simulation_move(self, game_state:STATE):
         rand = random.random()
-        if rand < 0.1:
-            return self.select_meth_bot.get_move(game_state.board,game_state.current_player,verbose=False)[0]
+        if rand < 0.6:
+            return self.select_meth_bot.get_move(game_state.board,game_state.current_player)[0]
         elif rand < 0.9:
             return Greedy_Bot(game_state.m, game_state.n).get_move(game_state.board,game_state.current_player)[0]
         else:
@@ -177,6 +175,8 @@ class AlphaGoMCTSPlayer:
 
     # 評估遊戲狀態
     def evaluate(self, state:STATE):
+        # value = self.select_meth_bot.PredictValue(state.board, state.current_player)
+        # return value
         total_boxes = (state.m-1)*(state.n-1)
         my_score = state.p1_p2_scores[0] if self.symbol == -1 else state.p1_p2_scores[1]
         opp_score = state.p1_p2_scores[1] if self.symbol == -1 else state.p1_p2_scores[0]
@@ -185,7 +185,6 @@ class AlphaGoMCTSPlayer:
 
     # 回傳模擬結果
     def backpropagate(self, node:MCTSNode, result):
-        
         while node:
             node.visits += 1
             if node.parent:  # 非根節點

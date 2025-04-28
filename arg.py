@@ -5,7 +5,7 @@ history_move = 8
 # batch_size = (m * (n - 1)) * 2
 # batch_size = (2*m-1)*(2*n-1)
 # batch_size = 1
-batch_size = 16
+batch_size = 32
 
 '''
 type 0: normal;             input shape: m * n
@@ -14,8 +14,8 @@ type 2: history_sequence;   input shape: total_move * (m * n)
 type 3: history_video;      input shape: total_move * m * n * 1
 '''
 args_Res = {
-    'num_of_generate_data_for_train': 500,
-    'epochs': 75,
+    'num_of_generate_data_for_train': 400,
+    'epochs': 50,
     'batch_size': batch_size,
     'verbose': True,
     'type': 0,

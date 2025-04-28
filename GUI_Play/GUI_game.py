@@ -135,7 +135,7 @@ class GameWindow(QMainWindow):
                 args_Res['load_model_name'] = f'Resnet_model_{m}x{n}_{ver}.h5'
             else:
                 args_Res['load_model_name'] = None
-            bot = ResnetBOT(input_size_m=m, input_size_n=n,input_size_c=history_move*2+1, game=self.game, args=args_Res)
+            bot = ResnetBOT(input_size_m=m, input_size_n=n, game=self.game, args=args_Res)
 
         return bot
 

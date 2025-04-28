@@ -287,21 +287,21 @@ def main():
     #         bot1_name=p3[1],
     #         depth=5)
 
-    for ver in range(6,7):
+    for ver in range(2,3):
         args_Res['train'] = False
         args_Res['load_model_name'] = f'Resnet_model_{size_m}x{size_n}_{ver}.h5'
-        p5 = [ResnetBOT(input_size_m=m, input_size_n=n,input_size_c=history_move*2+1, game=game, args=args_Res), f'resnet_{size_m}x{size_n}']
+        p5 = [ResnetBOT(input_size_m=m, input_size_n=n, game=game, args=args_Res), f'resnet_{size_m}x{size_n}']
 
-        dual(n_game=50,
+        # dual(n_game=50,
+        #     bot1=p5[0],
+        #     bot1_name=p5[1]+f'_{ver}',
+        #     bot2=p3[0],
+        #     bot2_name=p3[1])
+
+        dualAB(n_game=25,
             bot1=p5[0],
             bot1_name=p5[1]+f'_{ver}',
-            bot2=p2[0],
-            bot2_name=p2[1])
-
-    #     dualAB(n_game=25,
-    #         bot1=p5[0],
-    #         bot1_name=p5[1]+f'_{ver}',
-    #         depth=5)
+            depth=5)
     # print(game_state.board)
     # ab = AlphaBetaPlayer(-1, game_state, 6)
     # c_ab = C_AB_player(-1, game_state, 8)

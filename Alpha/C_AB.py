@@ -52,7 +52,7 @@ class C_AB_player:
         elif progress < 0.6:
             self.max_depth = 6
         elif progress < 0.7:
-            self.max_depth = 8
+            self.max_depth = 7
         elif progress < 0.8:
             self.max_depth = 9
         else:

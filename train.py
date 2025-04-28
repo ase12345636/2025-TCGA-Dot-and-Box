@@ -18,8 +18,7 @@ game_state = STATE(
 )
 game = DaB(game_state, True)
 # bot_CNN = CNNBOT(input_size_m=m, input_size_n=n, game=game, args=args_CNN)
-bot_Res = ResnetBOT(input_size_m=m, input_size_n=n,
-                    input_size_c=history_move*2+1, game=game, args=args_Res)
+bot_Res = ResnetBOT(input_size_m=m, input_size_n=n, game=game, args=args_Res)
 # bot_LSTM = LSTM_BOT(input_size_m=m, input_size_n=n, game=game, args=args_LSTM)
 # bot_ConvLSTM = ConvLSTM_BOT(
 #     input_size_m=m, input_size_n=n, game=game, args=args_ConvLSTM)
