@@ -5,12 +5,13 @@
 # p1 -> -1(blue)，p2 -> 1(red)
 from DaB_Utils import *
 from dataclasses import dataclass, field
-from typing import List
+from collections import deque
 
 @dataclass
 class STATE:
     p1_p2_scores: list
     board: list
+    history_8board: deque # 紀錄當前+前7步的board
     m: int
     n: int
     board_rows: int = field(init=False)
@@ -60,7 +61,6 @@ class DotsAndBox():
                 move_data = player1.get_move(self.state.board, self.state.current_player)
             else:
                 move_data = player2.get_move(self.state.board, self.state.current_player)
-
             if move_data[0]:
                 row, col = move_data[0]
                 # 進行落子並檢查換手
@@ -74,6 +74,9 @@ class DotsAndBox():
                     self.state.p1_p2_scores[0] += score
                 elif self.state.current_player == 1:
                     self.state.p1_p2_scores[1] += score
+
+                self.state.history_8board.append(self.state.board)
+
                 if verbose:
                     self.print_board()
         winner = GetWinner(self.state.board, self.state.p1_p2_scores)

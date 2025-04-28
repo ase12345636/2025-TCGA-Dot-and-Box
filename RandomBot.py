@@ -184,7 +184,7 @@ class Random_Bot():
         self.board_rows = 2*m - 1
         self.board_cols = 2*n - 1
 
-    def get_move(self, board, player):
+    def get_move(self, board, player, verbose = True):
         ValidMoves = getValidMoves(board)
         result = random.choice(ValidMoves)
 
@@ -194,6 +194,7 @@ class Random_Bot():
         tmp=np.zeros(one_d_len)
         tmp[position] = 1.0
         copy_board = copy.deepcopy(board)
-        print(f"Radom: {result}")
+        if verbose:
+            print(f"Radom: {result}")
         return result, [copy_board, tmp, player]
 
