@@ -4,5 +4,5 @@ einops
 keras==2.10.0
 tensorflow==2.10.0
 cython
-numpy==1.24.3
+numpy==1.23.0
 pydot

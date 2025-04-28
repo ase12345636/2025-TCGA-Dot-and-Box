@@ -35,7 +35,7 @@ class Board:
                 box_i = 2*i + 1
                 box_j = 2*j + 1
 
-                # check box's four edges aren't legal edges
+                # check if box's four edges are legal edges
                 if (board[box_i][box_j] == config.empty_box):
 
                     if (board[box_i-1][box_j] != config.legal_edge and

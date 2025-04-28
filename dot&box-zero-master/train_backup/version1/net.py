@@ -3,10 +3,11 @@ import tensorflow as tf
 
 import config
 
+
 tf.compat.v1.disable_eager_execution()
 
 
-# version 2
+# version 1
 class NN:
     def __init__(self, session):
         self.session = session
@@ -83,20 +84,15 @@ def residual_block(x):
 
 
 def policy_head(x):
-    x = conv2d(x, 1, 32)
+    x = conv2d(x, 1, 2)
     x = batch_normalization(x)
     x = rectifier_nonlinearity(x)
-    x = conv2d(x, 1, 1)
-    x = batch_normalization(x)
-    x = rectifier_nonlinearity(x)
-    x = tf.keras.layers.Reshape((-1, config.board_length))(x)
+    x = tf.keras.layers.Reshape((-1, config.board_length * 2))(x)
     return linear_layer(x, config.all_moves_num)
 
 
 def value_head(x):
-    x = conv2d(x, 1, 32)
-    x = batch_normalization(x)
-    x = rectifier_nonlinearity(x)
+    x = conv2d(x, 3, 3)
     x = conv2d(x, 1, 1)
     x = batch_normalization(x)
     x = rectifier_nonlinearity(x)

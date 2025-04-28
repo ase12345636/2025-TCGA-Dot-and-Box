@@ -8,7 +8,6 @@ board_length = N_data ** 2
 pass_move = N_data ** 2
 all_moves_num = N_data ** 2+1
 blue = -1
-draw = 0
 red = 1
 vertex = 5
 legal_edge = 0
@@ -27,8 +26,8 @@ noise_weight = 0.25
 
 
 # nn config
-history_num = 1
-residual_blocks_num = 5
+history_num = 4
+residual_blocks_num = 10
 momentum = 0.9
 l2_weight = 1e-4
 learning_rate = 1e-2
@@ -36,13 +35,13 @@ learning_rate = 1e-2
 
 # learning config
 self_play_wokers_num = 4
-self_play_woker_gpu_memory_fraction = 0.12
+self_play_woker_gpu_memory_fraction = 0.18
 self_play_batch_size = 4
-self_play_echo_max = 4
+self_play_echo_max = 8
 train_batch_size = 1024
-train_epoch_max = 64
+train_epoch_max = 128
 train_checkpoint_max_to_keep = 1
-learning_loop_echo_max = 1024
+learning_loop_echo_max = 5
 
 
 # path config

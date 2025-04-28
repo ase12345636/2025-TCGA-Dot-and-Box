@@ -1,10 +1,12 @@
+import numpy as np
+
 import subprocess
 from subprocess import PIPE, STDOUT, Popen
 
 import config
 from util import line_2_plane, log, plane_2_line
 
-import numpy as np
+from random_bot.RandomBot import Random_Bot, Greedy_Bot
 
 
 class HumanPlayer:
@@ -21,3 +23,15 @@ class HumanPlayer:
                 print("illegal.")
             else:
                 return human_input
+
+
+class RandomPlayer:
+    def make_move(self, current_node):
+        return Random_Bot(config.N, config.N).get_move(
+            current_node.board.board, current_node.player)
+
+
+class GreedyPlayer:
+    def make_move(self, current_node):
+        return Greedy_Bot(config.N, config.N).get_move(
+            current_node.board.board, current_node.player)

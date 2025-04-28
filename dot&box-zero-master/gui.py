@@ -49,20 +49,21 @@ def print_board(board, cur_string_board):
         print("".join(line))
 
 
-def print_node(node):
+def print_node(node, init=False):
     cur_string_board = copy.deepcopy(string_board)
     print_board(node.board.board, cur_string_board)
 
-    last_move = ""
-    if node.move == config.pass_move:
-        last_move = "pass"
-    else:
-        last_move = line_2_plane(node.move)
+    if not init:
+        last_move = ""
+        if node.move == config.pass_move:
+            last_move = "pass"
+        else:
+            last_move = line_2_plane(node.move)
 
-    if node.parent.fake or node.parent.player == config.blue:
-        print("blue plays " + last_move + ".")
+        if node.parent.fake or node.parent.player == config.blue:
+            print("blue plays " + last_move + ".")
 
-    else:
-        print("red plays " + last_move + ".")
+        else:
+            print("red plays " + last_move + ".")
 
-    print("=================")
+        print("=================")

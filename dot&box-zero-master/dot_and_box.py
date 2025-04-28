@@ -27,22 +27,30 @@ class SelfPlayGame:
         self.fake_nodes = [None] * batch_size
         self.current_nodes = [None] * batch_size
 
+    # collect training data
     def start(self):
+        # set memory used with each process
         gpu_options = tf.compat.v1.GPUOptions(
             per_process_gpu_memory_fraction=config.self_play_woker_gpu_memory_fraction)
+
         with tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(gpu_options=gpu_options)) as session:
+            # restore model
             saver = tf.compat.v1.train.Saver()
             self.restore(session, saver)
             nn = net.NN(session)
             mcts_batch = tree.MCTS_Batch(nn)
+
+            # collect training data with loop
             while self.echo < self.echo_max:
                 log("selfplay worker", self.worker_id, "version:",
                     self.version, "echo:", self.echo, "session start.")
                 self.play(mcts_batch)
                 self.save()
                 self.echo += 1
+
             log("selfplay worker", self.worker_id, "session end.")
 
+    # play the game
     def play(self, mcts_batch):
         terminals_num = 0
         moves_num = 0
@@ -55,11 +63,10 @@ class SelfPlayGame:
             self.current_nodes[i].is_game_root = True
             self.current_nodes[i].is_search_root = True
 
-        # simulation game
+        # simulate game
         while terminals_num != self.batch_size:
             terminals_num = 0
             moves_num += 1
-            # print(f'number of move: {moves_num}')
 
             gc.collect()
             pi_batch = mcts_batch.alpha(
@@ -76,8 +83,6 @@ class SelfPlayGame:
                     self.current_nodes[i] = make_move(
                         self.current_nodes[i], move)
 
-            # print(f'number of terminal: {terminals_num}')
-
     def save(self):
         data = []
         for node in self.current_nodes:
@@ -91,14 +96,19 @@ class SelfPlayGame:
 
             current = node
             while True:
+                # instance
                 data.append(current.to_features())
+                # ground truth
                 data.append(current.pi)
                 data.append(winner)
+
                 if current.is_game_root:
                     break
                 current = current.parent
+
+        # zip training data
         np.savez_compressed(config.data_path + "{0:03d}_{1:03d}_{2:02d}{3:02d}".format(
-            self.batch_size, self.version, self.worker_id, self.echo), data=data)
+            self.batch_size, self.version, self.worker_id, self.echo), data=data, dtype=object)
 
     def restore(self, session, saver):
         checkpoint_name = restore_from_last_checkpoint(session, saver)
@@ -125,9 +135,9 @@ class Train:
     def __init__(self, batch_size=config.train_batch_size, epoch_max=config.train_epoch_max):
         self.version = 0
         self.state_data = np.zeros(
-            (0, config.N_data, config.N_data, config.history_num * 2 + 1), dtype=np.float)
-        self.pi_data = np.zeros((0, config.all_moves_num), dtype=np.float)
-        self.z_data = np.zeros((0, 1), dtype=np.float)
+            (0, config.N_data, config.N_data, config.history_num * 2 + 1), dtype=float)
+        self.pi_data = np.zeros((0, config.all_moves_num), dtype=float)
+        self.z_data = np.zeros((0, 1), dtype=float)
         self.batch_size = batch_size
         self.epoch_max = epoch_max
         self.data_len = self.load_data()
@@ -138,6 +148,7 @@ class Train:
         if self.data_len == 0:
             log("no data for training.")
             return
+
         with tf.compat.v1.Session() as session:
             saver = tf.compat.v1.train.Saver(
                 max_to_keep=config.train_checkpoint_max_to_keep)
@@ -145,8 +156,11 @@ class Train:
             nn = net.NN(session)
             log("training version:", self.version, "global step:",
                 self.global_step, "session start.")
+
             with open(config.log_path + "loss_log.csv", "a+") as loss_log_file:
+                # epoch
                 for echo in range(self.epoch_max):
+                    # batch
                     for batch_index in range(self.batch_num):
                         self.global_step += 1
                         state_batch, pi_batch, z_batch = self.get_next_batch(
@@ -174,10 +188,10 @@ class Train:
                            allow_pickle=True)['data']
             data_len = int(len(data) / 3)
             _state_data = np.zeros(
-                (data_len, config.N_data, config.N_data, config.history_num * 2 + 1), dtype=np.float)
+                (data_len, config.N_data, config.N_data, config.history_num * 2 + 1), dtype=float)
             _pi_data = np.zeros(
-                (data_len, config.all_moves_num), dtype=np.float)
-            _z_data = np.zeros((data_len, 1), dtype=np.float)
+                (data_len, config.all_moves_num), dtype=float)
+            _z_data = np.zeros((data_len, 1), dtype=float)
             for i in range(data_len):
                 _state_data[i] = data[3 * i]
                 _pi_data[i] = data[3 * i + 1]
@@ -256,18 +270,21 @@ def make_move(node, move):
     return node
 
 
-def print_winner(node):
+def get_winner(node):
     blue_box_num = node.board.count_score(config.blue)
     red_box_num = node.board.count_score(config.red)
 
     if blue_box_num > red_box_num:
         print("blue wins.")
+        return -1
 
     elif blue_box_num < red_box_num:
         print("red wins.")
+        return 1
 
     else:
         print("draw.")
+        return 0
 
 
 def restore_from_last_checkpoint(session, saver):
@@ -309,14 +326,18 @@ def train_woker():
         traceback.print_exc()
 
 
-def learning_loop(self_play_wokers_num=config.self_play_wokers_num, echo_max=config.learning_loop_echo_max):
-    for i in range(echo_max):
+def learning_loop(self_play_wokers_num=config.self_play_wokers_num, learning_loop_echo_max=config.learning_loop_echo_max):
+
+    for i in range(learning_loop_echo_max):
+        # multi threads
+        # create training data
         pool = Pool(self_play_wokers_num)
         for i in range(self_play_wokers_num):
             pool.apply_async(self_play_woker, (i,))
         pool.close()
         pool.join()
 
+        # train model
         process = Process(target=train_woker)
         process.start()
         process.join()
@@ -341,6 +362,8 @@ def play_game(player, color):
         mcts_batch = tree.MCTS_Batch(nn)
         moves_num = 0
 
+        gui.print_node(current_node, True)
+
         while True:
             gc.collect()
             moves_num += 1
@@ -363,11 +386,77 @@ def play_game(player, color):
                 break
 
         # who is the winner
-        print_winner(current_node)
+        return get_winner(current_node)
 
 
 def play_with_human(color):
-    play_game(api.HumanPlayer(), color)
+    _ = play_game(api.HumanPlayer(), color)
+
+
+def play_with_random_bot(round):
+    winner_log = [0, 0, 0]
+
+    for i in range(round):
+        win = play_game(api.RandomPlayer(), config.blue)
+        if win == config.blue:
+            winner_log[0] += 1
+
+        elif win == config.red:
+            winner_log[1] += 1
+
+        else:
+            winner_log[2] += 1
+
+    for i in range(round):
+        win = play_game(api.RandomPlayer(), config.red)
+        if win == config.red:
+            winner_log[0] += 1
+
+        elif win == config.blue:
+            winner_log[1] += 1
+
+        else:
+            winner_log[2] += 1
+
+    print(f'Alpha Zero: {winner_log[0]}')
+    print(f'Random Bot: {winner_log[1]}')
+    print(f'Draw: {winner_log[2]}')
+
+    winning_rate = float(winner_log[0]/(round*2)*100)
+    print(f'Winning Rate: {winning_rate}%')
+
+
+def play_with_greedy_bot(round):
+    winner_log = [0, 0, 0]
+
+    for i in range(round):
+        win = play_game(api.GreedyPlayer(), config.blue)
+        if win == config.blue:
+            winner_log[0] += 1
+
+        elif win == config.red:
+            winner_log[1] += 1
+
+        else:
+            winner_log[2] += 1
+
+    for i in range(round):
+        win = play_game(api.GreedyPlayer(), config.red)
+        if win == config.red:
+            winner_log[0] += 1
+
+        elif win == config.blue:
+            winner_log[1] += 1
+
+        else:
+            winner_log[2] += 1
+
+    print(f'Alpha Zero: {winner_log[0]}')
+    print(f'Greedy Bot: {winner_log[1]}')
+    print(f'Draw: {winner_log[2]}')
+
+    winning_rate = float(winner_log[0]/(round*2)*100)
+    print(f'Winning Rate: {winning_rate}%')
 
 
 if __name__ == '__main__':
@@ -376,6 +465,10 @@ if __name__ == '__main__':
                         help='start a learning loop from the latest model, or a new random model if there is no any model', action="store_true")
     parser.add_argument("-m", "--play-with-human",
                         help='play with you on the command line', action="store_true")
+    parser.add_argument("-r", "--play-with-random-bot",
+                        help='play with random bot', action="store_true")
+    parser.add_argument("-g", "--play-with-greedy-bot",
+                        help='play with random bot', action="store_true")
     args = parser.parse_args()
 
     if args.learning_loop:
@@ -388,6 +481,14 @@ if __name__ == '__main__':
             color = int(input('Decide model is first move or second move: '))
 
         play_with_human(color)
+
+    elif args.play_with_random_bot:
+        # play_with_random_bot(int(input('Decide the round will play: ')))
+        play_with_random_bot(10)
+
+    elif args.play_with_greedy_bot:
+        # play_with_greedy_bot(int(input('Decide the round will play: ')))
+        play_with_greedy_bot(10)
 
     else:
         learning_loop()

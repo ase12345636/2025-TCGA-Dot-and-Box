@@ -14,6 +14,14 @@ def normalize_with_mask(x, mask):
     return x_normalized
 
 
+def detect_player(node_parent, player):
+    if node_parent.fake:
+        return player
+
+    else:
+        return player if not node_parent.board.next else -player
+
+
 class FakeNode:
     def __init__(self):
         self.parent = None
@@ -33,6 +41,10 @@ class Node:
         self.is_game_root = False
         self.is_search_root = False
         self.is_terminal = False
+        self.player = detect_player(parent, player)
+        self.fake = False
+
+        # policy of move
         self.pi = np.zeros([config.all_moves_num], dtype=float)
         # visit count
         self.edge_N = np.zeros([config.all_moves_num], dtype=float)
@@ -40,24 +52,19 @@ class Node:
         self.edge_W = np.zeros([config.all_moves_num], dtype=float)
         # prior probability of selecting self
         self.edge_P = np.zeros([config.all_moves_num], dtype=float)
-        self.fake = False
 
-        if self.parent.fake:
-            self.player = player
-
-        else:
-            self.player = player if not self.parent.board.next else -player
-
-    # mean action value
     @property
+    # mean action value
     def edge_Q(self):
         return self.edge_W / (self.edge_N + (self.edge_N == 0))
 
     @property
+    # variant of the PUCT algorithm
     def edge_U(self):
         return config.c_puct * self.edge_P * math.sqrt(max(1, self.self_N)) / (1 + self.edge_N)
 
     @property
+    # variant of the PUCT algorithm with noise
     def edge_U_with_noise(self):
         noise = normalize_with_mask(np.random.dirichlet(
             [config.noise_alpha] * config.all_moves_num), self.legal_moves)
@@ -66,6 +73,7 @@ class Node:
         return config.c_puct * p_with_noise * math.sqrt(max(1, self.self_N)) / (1 + self.edge_N)
 
     @property
+    # used to select best next node
     def edge_Q_plus_U(self):
         if self.is_search_root:
             return self.edge_Q * self.player + self.edge_U_with_noise + self.legal_moves * 1000
@@ -124,13 +132,16 @@ class MCTS_Batch:
         for i, node in enumerate(nodes):
             current = node
 
+            # expend new subtree
             while current.expanded:
+                # choose best next node
                 best_edge = np.argmax(current.edge_Q_plus_U)
 
                 if best_edge not in current.child_nodes:
                     current.child_nodes[best_edge] = Node(
                         current, best_edge, -current.player)
 
+                # detect if the tree is end
                 if current.is_terminal:
                     break
 
@@ -139,11 +150,14 @@ class MCTS_Batch:
                     break
 
                 current = current.child_nodes[best_edge]
+
+            # get last node
             best_nodes_batch[i] = current
 
         return best_nodes_batch
 
     def expand_and_evaluate(self, nodes_batch):
+        # get feature map
         features_batch = np.zeros(
             [len(nodes_batch), config.N_data, config.N_data, config.history_num * 2 + 1], dtype=float)
 
@@ -151,15 +165,16 @@ class MCTS_Batch:
             node.expanded = True
             features_batch[i] = node.to_features()
 
-        # use nn to predict next move, and current node's action value
+        # use nn to predict policy, and current node's action value
         p_batch, v_batch = self.nn.f_batch(features_batch)
 
-        # filter legal move, and norm their probability
+        # filter legal move, and norm their probability, prepared for PUCT algorithm
         for i, node in enumerate(nodes_batch):
             node.edge_P = normalize_with_mask(p_batch[i], node.legal_moves)
 
         return v_batch
 
+    # backup each node's visited-count, action value
     def backup(self, nodes_batch, v_batch):
         for i, node in enumerate(nodes_batch):
             current = node
@@ -181,32 +196,25 @@ class MCTS_Batch:
         self.backup(best_nodes_batch, v_batch)
 
     def alpha(self, nodes, temperature):
-        # print(f'temperature: {temperature}')
-        # print(f'inverse of temperature: {1 / temperature}')
-
         for i in range(config.simulations_num):
             self.search(nodes)
 
-        # count final probability of each
+        # get next move
         pi_batch = np.zeros([len(nodes), config.all_moves_num], dtype=float)
+
         for i, node in enumerate(nodes):
             n_with_temperature = node.edge_N**(1 / temperature)
-
             sum_n_with_temperature = np.sum(n_with_temperature)
-            # print(f'edge_N: {node.edge_N}\n' +
-            #       f'temperature: {temperature}\n' +
-            #       f'n_with_temperature: {n_with_temperature}\n' +
-            #       f'sum_n_with_temperature: {sum_n_with_temperature}\n')
-            # print(f'sum_n_with_temperature: {sum_n_with_temperature}')
 
+            # game end
             if sum_n_with_temperature == 0:
                 node.pi = np.zeros([config.all_moves_num], dtype=float)
                 node.pi[config.pass_move] = 1
 
+            # final probability of each move
             else:
                 node.pi = n_with_temperature / sum_n_with_temperature
 
-            # print(f'{node.pi}\n')
             pi_batch[i] = node.pi
 
         return pi_batch
