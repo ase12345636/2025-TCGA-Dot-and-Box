@@ -164,7 +164,8 @@ class DaB_ValueNet(DaB_BaseModel):
         self.model = ValueNet(self.w, self.h, self.c)
         self.model.build((None, self.w, self.h, self.c))
         self.model.compile(
-            loss=['categorical_crossentropy'], optimizer=Adam(0.002))
+            loss=['mean_squared_error'],
+            optimizer=Adam(0.0005))
     def fit(self, data, batch_size, epochs):
         input_boards, target_values = zip(*data)
 
@@ -174,7 +175,6 @@ class DaB_ValueNet(DaB_BaseModel):
         print(f"input board shape: {input_boards.shape}")
         # 處理 target_values
         target_values = np.array(target_values)  # 直接轉成一維 array，不用 reshape
-
         # 打印模型結構（可以保留）
         self.print_structure()
 

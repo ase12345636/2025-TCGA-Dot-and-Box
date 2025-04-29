@@ -214,7 +214,7 @@ class ResnetBOT(BaseBot):
             self.input_size_m, self.input_size_n, self.total_move), args=args)
 
         self.valueNet_model = DaB_ValueNet(input_shape=(
-            self.input_size_m, self.input_size_n, 2), args=args)
+            self.input_size_m, self.input_size_n, 2), args=args_ValueNet)
 
         try:
             self.model.load_weights(self.args['load_model_name'])

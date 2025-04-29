@@ -52,15 +52,15 @@ class AlphaGoMCTSPlayer:
             move = self.select_meth_bot.get_move(board, player)[0]
             return move, []
         elif progress < 0.6:
-            self.num_simulations = 200
-        elif progress < 0.7:
-            self.num_simulations = 250
-        elif progress < 0.8:
             self.num_simulations = 300
-        elif progress < 0.9:
+        elif progress < 0.7:
             self.num_simulations = 350
-        else:  # 終盤
+        elif progress < 0.8:
+            self.num_simulations = 350
+        elif progress < 0.9:
             self.num_simulations = 400
+        else:  # 終盤
+            self.num_simulations = 500
 
         if verbose:
             print(f"Game progress: {progress}")
@@ -113,7 +113,7 @@ class AlphaGoMCTSPlayer:
         move = node.untried_moves.pop()
         new_state = deepcopy(node.game_state)
         r, c = move
-
+        
         # 預測當前狀態所有可行步的機率
         if self.select_meth_bot is not None:
             policy = self.select_meth_bot.PredictPolicy(new_state.board)    # 用policyNet得到每個位置的機率分布
@@ -144,22 +144,22 @@ class AlphaGoMCTSPlayer:
     # 模擬遊戲進行
     def simulate(self, game_state:STATE):
         state = deepcopy(game_state)  # 複製遊戲狀態
-        depth = 0
+        # depth = 0
         
-        # 以state為遊戲狀態往下模擬，以self.select_meth_bot進行雙方對弈模擬
-        while not isGameOver(state.board):  # 直到遊戲結束或達到最大深度
-            move = self.choose_simulation_move(state)  # 選擇模擬中的移動
-            if move is None:
-                break
-            # 執行該移動
-            r, c = move
-            state.current_player, score = make_move(state.board,r,c,state.current_player)
-            if state.current_player == -1:
-                state.p1_p2_scores[0] += score
-            elif state.current_player == 1:
-                state.p1_p2_scores[1] += score
+        # # 以state為遊戲狀態往下模擬，以self.select_meth_bot進行雙方對弈模擬
+        # while not isGameOver(state.board):  # 直到遊戲結束或達到最大深度
+        #     move = self.choose_simulation_move(state)  # 選擇模擬中的移動
+        #     if move is None:
+        #         break
+        #     # 執行該移動
+        #     r, c = move
+        #     state.current_player, score = make_move(state.board,r,c,state.current_player)
+        #     if state.current_player == -1:
+        #         state.p1_p2_scores[0] += score
+        #     elif state.current_player == 1:
+        #         state.p1_p2_scores[1] += score
 
-            state.history_8board.append(state.board)
+        #     state.history_8board.append(state.board)
 
         return self.evaluate(state)  # 對遊戲結束或是達終止條件的state進行評分
 
@@ -175,12 +175,12 @@ class AlphaGoMCTSPlayer:
 
     # 評估遊戲狀態
     def evaluate(self, state:STATE):
-        # value = self.select_meth_bot.PredictValue(state.board, state.current_player)
-        # return value
-        total_boxes = (state.m-1)*(state.n-1)
-        my_score = state.p1_p2_scores[0] if self.symbol == -1 else state.p1_p2_scores[1]
-        opp_score = state.p1_p2_scores[1] if self.symbol == -1 else state.p1_p2_scores[0]
-        return (my_score - opp_score) / total_boxes
+        value = self.select_meth_bot.PredictValue(state.board, state.current_player)
+        return value
+        # total_boxes = (state.m-1)*(state.n-1)
+        # my_score = state.p1_p2_scores[0] if self.symbol == -1 else state.p1_p2_scores[1]
+        # opp_score = state.p1_p2_scores[1] if self.symbol == -1 else state.p1_p2_scores[0]
+        # return (my_score - opp_score) / total_boxes
 
 
     # 回傳模擬結果

@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../')
 from Dots_and_Box import *
 from RandomBot import Random_Bot,Greedy_Bot
 from DeepLearning import *
-from Alpha.AlphaBeta import AlphaBetaPlayer
+from AlphaGo.AlphaGoMCTS import AlphaGoMCTSPlayer
 from Alpha.C_AB import C_AB_player
 from arg import *
 
@@ -56,7 +56,7 @@ class GameWindow(QMainWindow):
         self.P2_score_label.setGeometry(650, 150, 175, 25)
         self.P2_score_label.setFont(self.font)  # 設置標籤字型
 
-        player_list = ["人類","Random","貪婪","C_AB","AlphaBeta","Resnet"]
+        player_list = ["人類","Random","貪婪","C_AB","AlphaGo","Resnet"]
         # 玩家1下拉選單
         self.p1_combo_box = QComboBox(self)
         self.p2_combo_box = QComboBox(self)
@@ -184,9 +184,10 @@ class GameWindow(QMainWindow):
             self.p1 = C_AB_player(-1,self.game.state)
             if ver:
                 self.p1.max_depth = int(ver)
-        elif self.p1 == "AlphaBeta":
+        elif self.p1 == "AlphaGo":
             ver = self.p1_ver_input_box.text()
-            self.p1 = AlphaBetaPlayer(-1,self.game.state)
+            self.p1 = AlphaGoMCTSPlayer(200, self.game, -1, 1.5, 10)
+            
             if ver:
                 self.p1.max_depth = int(ver)
         else:
@@ -206,9 +207,9 @@ class GameWindow(QMainWindow):
             self.p2 = C_AB_player(1,self.game.state)
             if ver:
                 self.p2.max_depth = int(ver)
-        elif self.p2 == "AlphaBeta":
+        elif self.p2 == "AlphaGo":
             ver = self.p2_ver_input_box.text()
-            self.p2 = AlphaBetaPlayer(1,self.game.state)
+            self.p2 = AlphaGoMCTSPlayer(200, self.game, -1, 1.5, 10)
             if ver:
                 self.p2.max_depth = int(ver)
         else:
