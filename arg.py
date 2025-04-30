@@ -22,3 +22,13 @@ args_Res = {
     'train': True,
     'load_model_name': None
 }
+
+args_ValueNet = {
+    'num_of_generate_data_for_train': 400,
+    'epochs': 30,
+    'batch_size': batch_size*2,
+    'verbose': True,
+    'type': 0,
+    'train': True,
+    'load_model_name': None
+}
