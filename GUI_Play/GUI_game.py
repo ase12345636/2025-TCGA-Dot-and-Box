@@ -353,11 +353,13 @@ class GameWindow(QMainWindow):
             # 計算點擊的行和列
             row = y // self.gap
             col = x // self.gap
+            print(find_chain(self.game.state.board, row,col, self.game.state.board_rows, self.game.state.board_cols, self.game.state.current_player))
             self.game.state.current_player,score = make_move(self.game.state.board, row, col, self.game.state.current_player)
             if self.game.state.current_player == -1:
                 self.game.state.p1_p2_scores[0] += score
             elif self.game.state.current_player == 1:
                 self.game.state.p1_p2_scores[1] += score
+
             self.update()
             if self.game.state.current_player != self.p1 or self.game.state.current_player != self.p2: 
                 self.mouse_events_enabled = False

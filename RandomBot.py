@@ -7,6 +7,7 @@ def check_box(next_board):
     box_filled = False
     m = (len(next_board)+1)//2
     n = (len(next_board[0])+1)//2
+    box_pos = None
     for i in range(m - 1):
         for j in range(n - 1):
             box_i = 2*i + 1
@@ -18,7 +19,8 @@ def check_box(next_board):
                 next_board[box_i][box_j-1] != 0 and
                 next_board[box_i][box_j+1] != 0):
                 box_filled = True
-    return box_filled
+                box_pos = (box_i, box_j)
+    return box_filled, box_pos
 
 def check_suicide(next_board):
     box_filled = False
@@ -59,6 +61,30 @@ def check_suicide(next_board):
 
     return box_filled
 
+def find_chain(board, r, c, board_rows, board_cols, player):
+    """遞迴尋找從 (i, j) 出發的鏈長度s"""
+    n_board = copy.deepcopy(board)
+    stack = [(r, c)]
+    length = 0
+    while stack:
+        print(stack)
+        x, y = stack.pop()
+        if not isValid(n_board, x, y):
+            continue
+        n_board[x][y] = player
+        filled, score = checkBox(n_board, player)
+        # if not filled:
+        #     continue
+        length += score
+
+        print_board(n_board,board_rows,board_cols)
+        # 檢查相鄰格子（四周）
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            ni, nj = x + dx, y + dy
+            if 0 <= ni < board_rows and 0 <= nj < board_cols:
+                stack.append((ni, nj))
+    return length
+    
 
 def GreedAlg(board,ValidMoves,verbose = False):
     for ValidMove in ValidMoves:
@@ -66,7 +92,7 @@ def GreedAlg(board,ValidMoves,verbose = False):
         next_board = board
         next_board[r][c] = 1
 
-        if check_box(next_board):
+        if check_box(next_board)[0]:
             if verbose:
                 print(ANSI_string("greedy","green",None,True))
             next_board[r][c] = 0
@@ -137,7 +163,7 @@ class Greedy_Bot_2():
             next_board = board
             next_board[r][c] = 1
 
-            if check_box(next_board):
+            if check_box(next_board)[0]:
                 if verbose:
                     print(ANSI_string("greedy","green",None,True))
                 next_board[r][c] = 0
@@ -168,6 +194,7 @@ class Greedy_Bot_2():
             greedy_move = random.choice(getValidMoves(board))
 
         r,c = greedy_move
+        print(find_chain(r,c, False, self.board_rows, self.board_cols))
 
         one_d_len = self.board_rows * self.board_cols
         position = r*self.board_cols+c
