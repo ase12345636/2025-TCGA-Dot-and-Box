@@ -10,7 +10,6 @@ from arg import *
 
 
 args_Res['train'] = False
-print(args_Res)
 
 
 # MCTS 節點類別，代表蒙地卡羅樹搜索中的每個節點
@@ -24,6 +23,7 @@ class MCTSNode:
         self.visits = 0  # 訪問次數, N(s, a)
         self.score = 0  # 總得分
         self.Wsa = 0
+
         self.player = player    # player下了move走到此節點
 
         self.win_count = 0  # 走此節點會獲勝的次數
@@ -32,10 +32,15 @@ class MCTSNode:
         self.untried_moves = getValidMoves(self.game_state.board)
         random.shuffle(self.untried_moves)  # 隨機化未嘗試的移動順序
 
+        total_moves = (self.game_state.m - 1) * self.game_state.n + \
+            self.game_state.m * (self.game_state.n - 1)
+        remaining_moves = len(getValidMoves(self.game_state.board))
+        self.progress = 1 - remaining_moves / total_moves
+
 
 # MCTS 玩家類別，使用蒙地卡羅樹搜索進行決策
 class AlphaGoMCTSPlayer:
-    def __init__(self, num_simulations, game: DotsAndBox, symbol, exploration_weight=2, max_depth = 20):
+    def __init__(self, num_simulations, game: DotsAndBox, symbol, exploration_weight=2, max_depth=20):
         self.num_simulations = num_simulations  # 蒙地卡羅模擬次數
         self.exploration_weight = exploration_weight  # 探索權重
         self.root_state = game.state  # 遊戲狀態
@@ -46,49 +51,41 @@ class AlphaGoMCTSPlayer:
         self.max_depth = max_depth
 
     # 獲取下一步移動
-
     def get_move(self, board, player, verbose=True):
         current_time = time.time()
-
-        total_moves = (self.root_state.m - 1) * self.root_state.n + \
-            self.root_state.m * (self.root_state.n - 1)
-        remaining_moves = len(getValidMoves(self.root_state.board))
-        progress = 1 - remaining_moves / total_moves
 
         # 更新當前遊戲狀態
         self.root_state.board = board
         self.root_state.current_player = player
 
-        # if progress < 0.45:  # 開局
-        #     move = self.select_meth_bot.get_move(board, player)[0]
-        #     return move, []
-        # elif progress < 0.6:
-        #     self.num_simulations = 300
-        # elif progress < 0.7:
-        #     self.num_simulations = 350
-        # elif progress < 0.8:
-        #     self.num_simulations = 350
-        # elif progress < 0.9:
-        #     self.num_simulations = 400
-        # else:  # 終盤
-        #     self.num_simulations = 500
-
-        if verbose:
-            print(f"Game progress: {progress}")
-            print(f"Max num_simulations: {self.num_simulations}")
-
         if not self.root_state:
             raise ValueError("Game state not set")  # 若遊戲狀態未設置，則拋出錯誤
         root = MCTSNode(self.root_state)  # 根節點為當前遊戲狀態的複製
 
+        if root.progress < 0.45:  # 開局
+            self.num_simulations *= 1
+        elif root.progress < 0.6:
+            self.num_simulations *= 0.9
+        elif root.progress < 0.7:
+            self.num_simulations *= 0.8
+        elif root.progress < 0.8:
+            self.num_simulations *= 0.7
+        elif root.progress < 0.9:
+            self.num_simulations *= 0.6
+        else:  # 終盤
+            self.num_simulations *= 0.5
+
         # 進行多次模擬
-        for _ in range(self.num_simulations):
-            node = self.select(root)  # 選擇節點
+        for _ in range(int(self.num_simulations)):
+            # 選擇節點
+            node = self.select(root)
+
             # 選擇節點直到不能選為止
             if not isGameOver(node.game_state.board) and node.untried_moves:
                 node = self.expand(node)
+
             # simulation_result = self.evaluate(deepcopy(node.game_state))
-            simulation_result = self.simulate(node.game_state)
+            simulation_result = self.evaluate(node)
             self.backpropagate(node, simulation_result)
 
         # 如果根節點沒有子節點，則隨機選擇一個有效移動
@@ -121,7 +118,7 @@ class AlphaGoMCTSPlayer:
 
         if verbose:
             print(
-                f"AlphaGo best move: {best_move}, take {end_time - current_time:.6f}s")
+                f"AlphaGo takes {end_time - current_time:.6f}s")
 
         self.del_tree(root)
         del root
@@ -129,7 +126,6 @@ class AlphaGoMCTSPlayer:
         return best_move, []
 
     # 節點選擇過程
-
     def select(self, node: MCTSNode):
         while node.untried_moves == [] and node.children != []:
             node = self.puct_select(node)
@@ -137,30 +133,23 @@ class AlphaGoMCTSPlayer:
         return node
 
     # 擴展節點
-
     def expand(self, node: MCTSNode):
         random.shuffle(node.untried_moves)
-        # 從此節點狀態中可下且未被展開的move進行選擇
+        # 隨機挑選可行步
         move = node.untried_moves.pop()
         new_state = deepcopy(node.game_state)
         r, c = move
 
-        # 預測當前狀態所有可行步的機率
-        if self.select_meth_bot is not None:
-            policy = self.select_meth_bot.PredictPolicy(
-                new_state.board)    # 用policyNet得到每個位置的機率分布
-            move_idx = r*new_state.board_cols + c
-            new_prior = policy[move_idx]    # 把此步的機率標記進該節點中
-
-        else:
-            # 沒有 policy_net，則平均分配
-            total_untried = len(node.untried_moves) + 1  # +1 是包括這個 move
-            new_prior = 1.0 / total_untried
+        # 得到此可行步的機率
+        policy = self.select_meth_bot.PredictPolicy(
+            new_state.board)
+        move_idx = r*new_state.board_cols + c
+        new_prior = policy[move_idx]
 
         # 執行移動
-        new_node_player = new_state.current_player
         new_state.current_player, score = make_move(
             new_state.board, r, c, new_state.current_player)
+        new_node_player = new_state.current_player
         if new_state.current_player == -1:
             new_state.p1_p2_scores[0] += score
         elif new_state.current_player == 1:
@@ -175,50 +164,27 @@ class AlphaGoMCTSPlayer:
 
         return new_node
 
-     # 模擬遊戲進行
-    def simulate(self, game_state:STATE):
-        state = deepcopy(game_state)  # 複製遊戲狀態
-        depth = 0
-        # 以state為遊戲狀態往下模擬，以self.select_meth_bot進行雙方對弈模擬
-        while not isGameOver(state.board) and depth > self.max_depth:  # 直到遊戲結束或達到最大深度
-            move = self.choose_simulation_move(state)  # 選擇模擬中的移動
-            if move is None:
-                break
-            # 執行該移動
-            r, c = move
-            state.current_player, score = make_move(state.board,r,c,state.current_player)
-            if state.current_player == -1:
-                state.p1_p2_scores[0] += score
-            elif state.current_player == 1:
-                state.p1_p2_scores[1] += score
-
-            state.history_8board.append(state.board)
-            depth += 1
-
-        return self.evaluate(game_state)  # 對遊戲結束或是達終止條件的state進行評分
-    
-    def choose_simulation_move(self, game_state:STATE):
-        rand = random.random()
-        if rand < 0.7:
-            return self.select_meth_bot.get_move(game_state.board,game_state.current_player,verbose=False)[0]
-        elif rand < 0.9:
-            return Greedy_Bot(game_state.m, game_state.n).get_move(game_state.board,game_state.current_player)[0]
-        else:
-            return Random_Bot(game_state.m, game_state.n).get_move(game_state.board,game_state.current_player,verbose=False)[0]
-
     # 評估遊戲狀態
-    def evaluate(self, state: STATE):
-        # value = self.select_meth_bot.PredictValue(
-        #     state.board, state.current_player)
-        # return value
-        total_boxes = (state.m-1)*(state.n-1)
-        my_score = state.p1_p2_scores[0] if self.symbol == -1 else state.p1_p2_scores[1]
-        opp_score = state.p1_p2_scores[1] if self.symbol == -1 else state.p1_p2_scores[0]
+    def evaluate(self, node: MCTSNode):
+        # If node is root or node's player is different to node's parent's player, set false
+        play_next = -1 if not node.parent or node.player != node.parent.player else 1
 
-        return (my_score - opp_score) / total_boxes
+        # Score Difference
+        _, own_score = checkBox(node.game_state.board, node.player)
+        _, oppo_score = checkBox(node.game_state.board, node.player*-1)
+        difference_score = own_score-oppo_score
+
+        # Box chain
+        next_chain = play_next*checkBoxChain(node.game_state.board)
+
+        # number of box
+        total_boxes = (node.game_state.m-1)*(node.game_state.n-1)
+
+        total_score = difference_score+next_chain*100/(total_boxes*100)
+
+        return total_score if node.player == self.symbol else total_score*-1
 
     # 回傳模擬結果
-
     def backpropagate(self, node: MCTSNode, result):
         while node:
             node.visits += 1
@@ -252,8 +218,6 @@ class AlphaGoMCTSPlayer:
 
     def del_tree(self, current_node):
         for child in current_node.children:
-            if child.children == []:
-                del child
+            self.del_tree(child)
 
-            else:
-                self.del_tree(child)
+        current_node.children.clear()
