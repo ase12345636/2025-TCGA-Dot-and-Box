@@ -6,6 +6,7 @@ from Alpha.AlphaBeta import AlphaBetaPlayer
 from Alpha.C_AB import C_AB_player
 from Alpha.MCTS import MCTSPlayer
 from AlphaGo.AlphaGoMCTS import AlphaGoMCTSPlayer
+from AlphaGo.AlphaGoMCTS_noVnet import AlphaGoMCTSPlayer_NoVNet
 from arg import *
 import os
 
@@ -344,10 +345,12 @@ def main():
     # args_Res['load_model_name'] = f'Resnet_model_4x4_31.h5'
     # p5 = [ResnetBOT(input_size_m=m, input_size_n=n, game=game, args=args_Res), 'resnet']
     # game.play(p2[0], p5[0])
-    MCTS_1 = MCTSPlayer(30000,game_state, -1, 1.3, 2)
-    MCTS_2 = MCTSPlayer(30000,game_state, 1, 1.3, 2)
+    # MCTS_1 = MCTSPlayer(30000,game_state, -1, 1.3, 2)
+    # MCTS_2 = MCTSPlayer(30000,game_state, 1, 1.3, 2)
     cab_1 = C_AB_player(-1, game_state, 4)
     cab_2 = C_AB_player(1, game_state, 4)
+    AZ_MCTS_NoVNet_1 = AlphaGoMCTSPlayer_NoVNet(50, game, -1, 2)
+    AZ_MCTS_NoVNet_2 = AlphaGoMCTSPlayer_NoVNet(50, game, 1, 2)
     # AZ_MCTS_1 = AlphaGoMCTSPlayer(400, game, -1, 2)
     # AZ_MCTS_2 = AlphaGoMCTSPlayer(400, game, 1, 1, 2)
     # dualMCTS(5, p3[0], p3[1])
@@ -363,10 +366,10 @@ def main():
     #         bot1_name=p3[1],
     #         depth=5)
     # dualMCTS_AB(15)
-    for ver in range(8,10):
-        args_Res['train'] = False
-        args_Res['load_model_name'] = f'Resnet_model_{size_m}x{size_n}_{ver}.h5'
-        p5 = [ResnetBOT(input_size_m=m, input_size_n=n, game=game, args=args_Res), f'resnet_{size_m}x{size_n}']
+    # for ver in range(8,10):
+    #     args_Res['train'] = False
+    #     args_Res['load_model_name'] = f'Resnet_model_{size_m}x{size_n}_{ver}.h5'
+    #     p5 = [ResnetBOT(input_size_m=m, input_size_n=n, game=game, args=args_Res), f'resnet_{size_m}x{size_n}']
 
     #     # dual(n_game=50,
     #     #     bot1=p5[0],
@@ -379,13 +382,25 @@ def main():
         #     bot1_name=p5[1]+f'_{ver}',
         #     depth=5)
         
-        dualMCTS(10, p5[0], p5[1], 2)
+        #dualMCTS(10, p5[0], p5[1], 2)
     # print(game_state.board)
     # ab = AlphaBetaPlayer(-1, game_state, 6)
     # c_ab = C_AB_player(-1, game_state, 8)
     # game.play(cab_1, cab_2, train=False)
     # game.play(p3[0], p3[0])
 
+    # AZ_MCTS, Draw, C_AB
+    winner = [0, 0, 0]
+    for _ in range(1):
+        game.NewGame()
+        winner[game.play(AZ_MCTS_NoVNet_1, cab_2, verbose=True, train=True)+1] += 1
+        game.NewGame()
+        winner[game.play(cab_1, AZ_MCTS_NoVNet_2, verbose=True,
+                         train=True)*-1+1] += 1
+
+    print(f'AZ_MCTS_NoVNet: {winner[0]}')
+    print(f'Draw:           {winner[1]}')
+    print(f'C_AB:           {winner[2]}')
 
 if __name__ == "__main__":
     main()

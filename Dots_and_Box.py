@@ -7,20 +7,23 @@ from DaB_Utils import *
 from dataclasses import dataclass, field
 from collections import deque
 
+
 @dataclass
 class STATE:
     p1_p2_scores: list
     board: list
-    history_8board: deque # 紀錄當前+前7步的board
+    history_8board: deque  # 紀錄當前+前7步的board
     m: int
     n: int
     board_rows: int = field(init=False)
     board_cols: int = field(init=False)
     current_player: int = -1
+    next = False
 
     def __post_init__(self):
         self.board_rows = 2 * self.m - 1
         self.board_cols = 2 * self.n - 1
+
 
 class DotsAndBox():
     def initialize_board(self, m, n):
@@ -40,7 +43,7 @@ class DotsAndBox():
                     board[i][j] = 0
         return board
 
-    def __init__(self, state:STATE, collect_gaming_data = True):
+    def __init__(self, state: STATE, collect_gaming_data=True):
         self.state = state
         self.state.board = self.initialize_board(self.state.m, self.state.n)
         self.state.current_player = -1
@@ -49,7 +52,7 @@ class DotsAndBox():
         self.collect_gaming_data = collect_gaming_data
         self.history = []
 
-    def play(self, player1, player2, verbose=True, train = False):
+    def play(self, player1, player2, verbose=True, train=False):
         if verbose:
             self.print_board()
 
@@ -58,18 +61,21 @@ class DotsAndBox():
             print(f"Current player: {self.state.current_player}")
 
             if self.state.current_player == -1:
-                move_data = player1.get_move(self.state.board, self.state.current_player)
+                move_data = player1.get_move(
+                    self.state.board, self.state.current_player)
             else:
-                move_data = player2.get_move(self.state.board, self.state.current_player)
+                move_data = player2.get_move(
+                    self.state.board, self.state.current_player)
             if move_data[0]:
                 row, col = move_data[0]
                 # 進行落子並檢查換手
                 if not isValid(self.state.board, row, col):
-                    print("invalid move!")
+                    # print("invalid move!")
                     continue
                 if train:
                     self.history.append(move_data[1])
-                self.state.current_player,score = make_move(self.state.board, row, col, self.state.current_player)
+                self.state.current_player, score = make_move(
+                    self.state.board, row, col, self.state.current_player)
                 if self.state.current_player == -1:
                     self.state.p1_p2_scores[0] += score
                 elif self.state.current_player == 1:
@@ -79,6 +85,7 @@ class DotsAndBox():
 
                 if verbose:
                     self.print_board()
+
         winner = GetWinner(self.state.board, self.state.p1_p2_scores)
         self.print_board()
 

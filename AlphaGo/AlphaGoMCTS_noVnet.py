@@ -39,7 +39,7 @@ class MCTSNode:
 
 
 # MCTS 玩家類別，使用蒙地卡羅樹搜索進行決策
-class AlphaGoMCTSPlayer:
+class AlphaGoMCTSPlayer_NoVNet:
     def __init__(self, num_simulations, game: DotsAndBox, symbol, exploration_weight=2, max_depth=20):
         self.num_simulations = num_simulations  # 蒙地卡羅模擬次數
         self.exploration_weight = exploration_weight  # 探索權重
