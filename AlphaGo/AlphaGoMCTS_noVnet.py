@@ -62,21 +62,22 @@ class AlphaGoMCTSPlayer_NoVNet:
             raise ValueError("Game state not set")  # 若遊戲狀態未設置，則拋出錯誤
         root = MCTSNode(self.root_state)  # 根節點為當前遊戲狀態的複製
 
+        simulations=self.num_simulations
         if root.progress < 0.45:  # 開局
-            self.num_simulations *= 1
+            simulations *= 1
         elif root.progress < 0.6:
-            self.num_simulations *= 0.9
+            simulations *= 0.9
         elif root.progress < 0.7:
-            self.num_simulations *= 0.8
+            simulations *= 0.8
         elif root.progress < 0.8:
-            self.num_simulations *= 0.7
+            simulations *= 0.7
         elif root.progress < 0.9:
-            self.num_simulations *= 0.6
+            simulations *= 0.6
         else:  # 終盤
-            self.num_simulations *= 0.5
+            simulations *= 0.5
 
         # 進行多次模擬
-        for _ in range(int(self.num_simulations)):
+        for _ in range(int(simulations)):
             # 選擇節點
             node = self.select(root)
 
