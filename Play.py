@@ -32,17 +32,17 @@ def main():
     cab_1 = C_AB_player(-1, game_state, 4)
     cab_2 = C_AB_player(1, game_state, 4)
 
-    AZ_MCTS_Ver3_1 = AlphaGoMCTSPlayer_Ver3(30, game, -1, 2)
-    AZ_MCTS_Ver3_2 = AlphaGoMCTSPlayer_Ver3(30, game, 1, 2)
+    AZ_MCTS_Ver3_1 = AlphaGoMCTSPlayer_Ver3(50, game, -1, 2)
+    AZ_MCTS_Ver3_2 = AlphaGoMCTSPlayer_Ver3(50, game, 1, 2)
     
     # AZ_MCTS, Draw, C_AB
     winner = [0, 0, 0]
     for _ in range(1):
         game.NewGame()
-        winner[game.play(AZ_MCTS_Ver3_1, cab_2, verbose=True,
+        winner[game.play(AZ_MCTS_Ver3_1, cab_2, verbose=False,
                          train=True)+1] += 1
         game.NewGame()
-        winner[game.play(cab_1, AZ_MCTS_Ver3_2, verbose=True, train=True)*-1+1] += 1
+        winner[game.play(cab_1, AZ_MCTS_Ver3_2, verbose=False, train=True)*-1+1] += 1
 
     print(f'AZ_MCTS_Ver3:   {winner[0]}')
     print(f'Draw:           {winner[1]}')

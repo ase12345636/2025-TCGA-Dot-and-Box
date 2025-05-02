@@ -98,7 +98,7 @@ class AlphaGoMCTSPlayer_Ver3:
                 U = self.exploration_weight*child.prior * \
                     math.sqrt(N_parent) / (1 + N)
                 children_puct_score.append(
-                    Q*node.game_state.current_player*(-1)+U)
+                    Q*child.game_state.current_player*(-1)+U)
 
             return np.array(children_puct_score, dtype=float)
 
@@ -113,7 +113,7 @@ class AlphaGoMCTSPlayer_Ver3:
     def expand_and_evaluate(self, node: MCTSNode):
         def evaluate(node: MCTSNode):
             # If node is root or node's player is different to node's parent's player, set false
-            play_next = -1 if not node.parent or \
+            play_next = 0 if not node.parent or \
                 node.game_state.current_player != node.parent.game_state.current_player else 1
 
             # Score Difference
@@ -121,17 +121,19 @@ class AlphaGoMCTSPlayer_Ver3:
                 node.game_state.board, node.game_state.current_player)
             _, oppo_score = checkBox(
                 node.game_state.board, node.game_state.current_player*-1)
-            difference_score = own_score-oppo_score
+            
+            # difference_score = own_score-oppo_score
+            difference_score = (own_score-oppo_score)
 
             # Box chain
-            next_chain = play_next*checkBoxChain(node.game_state.board)
+            next_chain = checkBoxChain(node.game_state.board)
 
             # number of box
-            total_boxes = (node.game_state.m-1)*(node.game_state.n-1)
+            total_boxes = (node.game_state.m-1)*(node.game_state.n-1)*100
 
-            total_score = difference_score+next_chain*100/(total_boxes*100)
+            action_score=difference_score+next_chain*100+play_next*300
 
-            return total_score if node.game_state.current_player == self.symbol else total_score*-1
+            return action_score/total_boxes*node.game_state.current_player
 
         def expand_new_node(node: MCTSNode):
             policy = self.select_meth_bot.PredictPolicy(node.game_state.board)

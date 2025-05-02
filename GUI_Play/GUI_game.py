@@ -198,13 +198,13 @@ class GameWindow(QMainWindow):
 
         elif self.p1 == "AlphaGo":
             ver = self.p1_ver_input_box.text()
-            self.p1 = AlphaGoMCTSPlayer(200, self.game, -1, 1.5, 10)
+            self.p1 = AlphaGoMCTSPlayer(200, self.game, -1, 2)
             if ver:
                 self.p1.max_depth = int(ver)
 
         elif self.p1 == "AlphaGo_Ver3":
             ver = self.p1_ver_input_box.text()
-            self.p1 = AlphaGoMCTSPlayer_Ver3(200, self.game, -1, 2)
+            self.p1 = AlphaGoMCTSPlayer_Ver3(600, self.game, -1, 2)
 
         else:
             ver = self.p1_ver_input_box.text()
@@ -230,13 +230,13 @@ class GameWindow(QMainWindow):
 
         elif self.p2 == "AlphaGo":
             ver = self.p2_ver_input_box.text()
-            self.p2 = AlphaGoMCTSPlayer(200, self.game, 1, 1.5, 10)
+            self.p2 = AlphaGoMCTSPlayer(200, self.game, 1, 2)
             if ver:
                 self.p2.max_depth = int(ver)
 
         elif self.p2 == "AlphaGo_Ver3":
             ver = self.p2_ver_input_box.text()
-            self.p2 = AlphaGoMCTSPlayer_Ver3(200, self.game, 1, 2)
+            self.p2 = AlphaGoMCTSPlayer_Ver3(600, self.game, 1, 2)
 
         else:
             ver = self.p2_ver_input_box.text()

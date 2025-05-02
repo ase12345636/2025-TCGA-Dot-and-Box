@@ -75,7 +75,7 @@ class DotsAndBox():
                 row, col = move_data[0]
                 # 進行落子並檢查換手
                 if not isValid(self.state.board, row, col):
-                    # print("invalid move!")
+                    print("invalid move!")
                     continue
                 if train:
                     self.history.append(move_data[1])
