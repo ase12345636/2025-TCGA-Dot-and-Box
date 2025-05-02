@@ -1,20 +1,22 @@
 import os
 import sys
-from GUI_style import *
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../')
 
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QPainter, QColor, QPen, QFont, QPixmap
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QSlider, QLineEdit
-from Dots_and_Box import *
-from DeepLearning import *
-from AlphaGo.AlphaGoMCTS import AlphaGoMCTSPlayer
-from AlphaGo.AlphaGoMCTS_noVnet import AlphaGoMCTSPlayer_NoVNet
-from Alpha.C_AB import C_AB_player
-from arg import *
 from RandomBot import Random_Bot, Greedy_Bot
+from arg import *
+from Alpha.C_AB import C_AB_player
+from AlphaGo.AlphaGoMCTS_noVnet import AlphaGoMCTSPlayer_NoVNet
+from AlphaGo.AlphaGoMCTS import AlphaGoMCTSPlayer
+from DeepLearning import *
+from Dots_and_Box import *
+from PyQt5.QtWidgets import QMainWindow, QApplication, QComboBox, QSlider, QLineEdit
+from PyQt5 import QtWidgets
+from PyQt5.QtGui import QPainter, QColor, QPen, QFont, QPixmap
+from PyQt5.QtCore import Qt, QTimer
+from GUI_style import *
+
+
 
 
 args_Res['train'] = False
@@ -59,7 +61,8 @@ class GameWindow(QMainWindow):
         self.P2_score_label.setGeometry(650, 150, 175, 25)
         self.P2_score_label.setFont(self.font)  # 設置標籤字型
 
-        player_list = ["人類", "Random", "貪婪", "C_AB", "AlphaGo", "AlphaGo_NoVNet", "Resnet"]
+        player_list = ["人類", "Random", "貪婪", "C_AB",
+                       "AlphaGo", "AlphaGo_NoVNet", "Resnet"]
         # 玩家1下拉選單
         self.p1_combo_box = QComboBox(self)
         self.p2_combo_box = QComboBox(self)
@@ -185,16 +188,16 @@ class GameWindow(QMainWindow):
 
         elif self.p1 == "Random":
             self.p1 = Random_Bot(self.game.state.m, self.game.state.n)
-        
+
         elif self.p1 == "貪婪":
             self.p1 = Greedy_Bot(self.game.state.m, self.game.state.n)
-        
+
         elif self.p1 == "C_AB":
             ver = self.p1_ver_input_box.text()
             self.p1 = C_AB_player(-1, self.game.state)
             if ver:
                 self.p1.max_depth = int(ver)
-        
+
         elif self.p1 == "AlphaGo":
             ver = self.p1_ver_input_box.text()
             self.p1 = AlphaGoMCTSPlayer(200, self.game, -1, 1.5, 10)
@@ -203,8 +206,8 @@ class GameWindow(QMainWindow):
 
         elif self.p1 == "AlphaGo_NoVNet":
             ver = self.p1_ver_input_box.text()
-            self.p1 = AlphaGoMCTSPlayer_NoVNet(50, self.game, -1, 2)
-        
+            self.p1 = AlphaGoMCTSPlayer_NoVNet(30, self.game, -1, 2)
+
         else:
             ver = self.p1_ver_input_box.text()
             self.botOppo = self.loadBOT(
@@ -214,29 +217,29 @@ class GameWindow(QMainWindow):
         self.p2 = self.p2_combo_box.currentText()
         if self.p2 == "人類":
             self.p2 = 1
-        
+
         elif self.p2 == "Random":
             self.p2 = Random_Bot(self.game.state.m, self.game.state.n)
-        
+
         elif self.p2 == "貪婪":
             self.p2 = Greedy_Bot(self.game.state.m, self.game.state.n)
-        
+
         elif self.p2 == "C_AB":
             ver = self.p2_ver_input_box.text()
             self.p2 = C_AB_player(1, self.game.state)
             if ver:
                 self.p2.max_depth = int(ver)
-        
+
         elif self.p2 == "AlphaGo":
             ver = self.p2_ver_input_box.text()
-            self.p2 = AlphaGoMCTSPlayer(200, self.game, -1, 1.5, 10)
+            self.p2 = AlphaGoMCTSPlayer(200, self.game, 1, 1.5, 10)
             if ver:
                 self.p2.max_depth = int(ver)
 
         elif self.p2 == "AlphaGo_NoVNet":
             ver = self.p2_ver_input_box.text()
-            self.p2 = AlphaGoMCTSPlayer_NoVNet(50, self.game, 1, 2)
-        
+            self.p2 = AlphaGoMCTSPlayer_NoVNet(30, self.game, 1, 2)
+
         else:
             ver = self.p2_ver_input_box.text()
             self.botOppo = self.loadBOT(
