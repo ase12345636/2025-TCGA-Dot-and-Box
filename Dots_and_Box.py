@@ -18,11 +18,16 @@ class STATE:
     board_rows: int = field(init=False)
     board_cols: int = field(init=False)
     current_player: int = -1
-    next = False
+    total_moves: int = field(init=False)
+    remaining_moves: int = field(init=False)
+    progress: int = field(init=False)
 
     def __post_init__(self):
         self.board_rows = 2 * self.m - 1
         self.board_cols = 2 * self.n - 1
+        self.total_moves = (self.m - 1) * self.n + self.m * (self.n - 1)
+        self.remaining_moves = len(getValidMoves(self.board))
+        self.progress = 1 - self.remaining_moves / self.total_moves
 
 
 class DotsAndBox():

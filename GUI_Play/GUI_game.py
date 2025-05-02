@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../')
 from RandomBot import Random_Bot, Greedy_Bot
 from arg import *
 from Alpha.C_AB import C_AB_player
-from AlphaGo.AlphaGoMCTS_noVnet import AlphaGoMCTSPlayer_NoVNet
+from AlphaGo.AlphaGoMCTS_Ver3 import AlphaGoMCTSPlayer_Ver3
 from AlphaGo.AlphaGoMCTS import AlphaGoMCTSPlayer
 from DeepLearning import *
 from Dots_and_Box import *
@@ -15,8 +15,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPainter, QColor, QPen, QFont, QPixmap
 from PyQt5.QtCore import Qt, QTimer
 from GUI_style import *
-
-
 
 
 args_Res['train'] = False
@@ -36,8 +34,8 @@ class GameWindow(QMainWindow):
         self.BoardStart_pos = (60, 60)
         self.mouse_events_enabled = False
         self.paint_events_enabled = False
-        self.game_row = 4
-        self.game_col = 4
+        self.game_row = 5
+        self.game_col = 5
 
         # 設置字體樣式
         self.font = QFont("Arial", 11, QFont.Bold)  # 使用 Arial 字型，大小 14，粗體
@@ -62,7 +60,7 @@ class GameWindow(QMainWindow):
         self.P2_score_label.setFont(self.font)  # 設置標籤字型
 
         player_list = ["人類", "Random", "貪婪", "C_AB",
-                       "AlphaGo", "AlphaGo_NoVNet", "Resnet"]
+                       "AlphaGo", "AlphaGo_Ver3", "Resnet"]
         # 玩家1下拉選單
         self.p1_combo_box = QComboBox(self)
         self.p2_combo_box = QComboBox(self)
@@ -97,7 +95,7 @@ class GameWindow(QMainWindow):
         self.row_slider.setStyleSheet(slider_styleSheet)
         self.row_slider.setMinimum(3)  # 設定滑桿最小值
         self.row_slider.setMaximum(6)  # 設定滑桿最大值
-        self.row_slider.setValue(4)  # 設定滑桿初始值
+        self.row_slider.setValue(5)  # 設定滑桿初始值
         self.row_slider.setTickPosition(QSlider.TicksBelow)  # 設置刻度線的位置
         self.row_slider.setTickInterval(1)  # 設置刻度線的間距
         self.row_slider.valueChanged.connect(self.OnRowSlide)  # 當滑桿的值變化時觸發
@@ -108,7 +106,7 @@ class GameWindow(QMainWindow):
         self.col_slider.setStyleSheet(slider_styleSheet)
         self.col_slider.setMinimum(3)  # 設定滑桿最小值
         self.col_slider.setMaximum(6)  # 設定滑桿最大值
-        self.col_slider.setValue(4)  # 設定滑桿初始值
+        self.col_slider.setValue(5)  # 設定滑桿初始值
         self.col_slider.setTickPosition(QSlider.TicksBelow)  # 設置刻度線的位置
         self.col_slider.setTickInterval(1)  # 設置刻度線的間距
         self.col_slider.valueChanged.connect(self.OnColSlide)  # 當滑桿的值變化時觸發
@@ -204,9 +202,9 @@ class GameWindow(QMainWindow):
             if ver:
                 self.p1.max_depth = int(ver)
 
-        elif self.p1 == "AlphaGo_NoVNet":
+        elif self.p1 == "AlphaGo_Ver3":
             ver = self.p1_ver_input_box.text()
-            self.p1 = AlphaGoMCTSPlayer_NoVNet(30, self.game, -1, 2)
+            self.p1 = AlphaGoMCTSPlayer_Ver3(200, self.game, -1, 2)
 
         else:
             ver = self.p1_ver_input_box.text()
@@ -236,9 +234,9 @@ class GameWindow(QMainWindow):
             if ver:
                 self.p2.max_depth = int(ver)
 
-        elif self.p2 == "AlphaGo_NoVNet":
+        elif self.p2 == "AlphaGo_Ver3":
             ver = self.p2_ver_input_box.text()
-            self.p2 = AlphaGoMCTSPlayer_NoVNet(30, self.game, 1, 2)
+            self.p2 = AlphaGoMCTSPlayer_Ver3(200, self.game, 1, 2)
 
         else:
             ver = self.p2_ver_input_box.text()
@@ -349,13 +347,10 @@ class GameWindow(QMainWindow):
             for j in range(self.game.state.board_cols):
                 x = self.BoardStart_pos[0] + j * self.gap
                 y = self.BoardStart_pos[1] + i * self.gap
+
                 painter.setPen(green_pen)
-
-                # Debug lines
-                # painter.setBrush(Qt.NoBrush)
-                # painter.drawRect(x-self.gap//2,y-self.gap//2,self.gap,self.gap)
-
                 painter.setPen(Dots_pen)
+
                 if self.game.state.board[i][j] == -1:
                     painter.setPen(Blue_solid_pen)
                     if i % 2 == 0:  # 偶數列，水平線
